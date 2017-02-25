@@ -1,13 +1,20 @@
 package com.magicdroidx.raknetty.handler.session;
 
 import com.magicdroidx.raknetty.RakNetServer;
+import com.magicdroidx.raknetty.handler.session.future.FramePacketFuture;
+import com.magicdroidx.raknetty.handler.session.future.FrameSetPacketFuture;
+import com.magicdroidx.raknetty.handler.session.future.PacketFuture;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
 import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 import com.magicdroidx.raknetty.protocol.raknet.session.*;
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.ScheduledFuture;
 
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -16,18 +23,37 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractSession implements Session {
 
+    //Session Info
     int MTU;
     InetSocketAddress address;
     long GUID;
 
     SessionManager sessionManager;
     ChannelHandlerContext ctx;
+    private ScheduledFuture tickTask;
 
     private boolean idle = true;
     private long lastUpdateTime = System.currentTimeMillis();
-    private ScheduledFuture tickTask;
 
-    int outboundFrameIndex;
+    private PriorityBlockingQueue<PacketFuture> resendQueue = new PriorityBlockingQueue<>();
+
+    //Inbound indexes
+    private int inboundIndexFrameSet;
+    private int inboundIndexReliable;
+    private int inboundIndexOrdered;
+    private int inboundIndexSequenced;
+    private int inboundFragmentID;
+
+    //Outbound indexes
+    private int outboundIndexFrameSet;
+    private int outboundIndexReliable;
+    private int outboundIndexOrdered;
+    private int outboundIndexSequenced;
+    private int outboundFragmentID;
+
+    private List<Integer> indexAcknowledged = new ArrayList<>();
+    private List<Integer> indexNotAcknowledged = new ArrayList<>();
+
 
     AbstractSession(SessionManager sessionManager, InetSocketAddress address, ChannelHandlerContext ctx) {
         this.sessionManager = sessionManager;
@@ -79,7 +105,7 @@ public abstract class AbstractSession implements Session {
     public void close(String reason) {
         sessionManager.close(this, reason);
         tickTask.cancel(true);
-        sendPacket(new DisconnectPacket());
+        sendPacket(new DisconnectPacket(), Reliability.UNRELIABLE);
     }
 
     @Override
@@ -102,21 +128,91 @@ public abstract class AbstractSession implements Session {
         }
     }
 
-    protected void sendPacket(RakNetPacket packet) {
+    protected void sendPacket(FramePacket packet) {
+        sendPacket(packet, false);
+    }
+
+    @Override
+    public void sendPacket(RakNetPacket packet, Reliability reliability) {
+        sendPacket(packet, reliability, false);
+    }
+
+    protected void sendPacket(FramePacket packet, boolean immediate) {
+        if (immediate) {
+            FrameSetPacket frameSet = new FrameSetPacket();
+            frameSet.index = outboundIndexFrameSet++;
+            frameSet.frames().add(packet);
+            ctx.writeAndFlush(frameSet.envelop(address));
+        } else {
+            resendQueue.add(new FramePacketFuture(packet, packet.reliability, System.currentTimeMillis()));
+        }
+    }
+
+    public void sendPacket(RakNetPacket packet, Reliability reliability, boolean immediate) {
+        long present = System.currentTimeMillis();
 
         if (!(packet instanceof SessionPacket) || packet instanceof FramelessPacket) {
             ctx.writeAndFlush(packet.envelop(address));
             return;
         }
 
-        //TODO: Frame
-        FrameSetPacket frameSet = new FrameSetPacket();
-        frameSet.index = outboundFrameIndex++;
-        FramePacket frame = new FramePacket();
-        frame.body = (SessionPacket) packet;
-        frame.reliability = Reliability.RELIABLE_ORDERED;
-        frameSet.frames.add(frame);
-        ctx.writeAndFlush(frameSet.envelop(address));
+        if (packet instanceof FrameSetPacket) {
+            if (immediate) {
+                ctx.writeAndFlush(packet.envelop(address));
+            } else {
+                resendQueue.add(new FrameSetPacketFuture((FrameSetPacket) packet, reliability, present));
+            }
+            return;
+        }
+
+        packet.encode();
+
+        if (!reliability.isReliable()) {
+            FramePacket frame = new FramePacket();
+            frame.reliability = reliability;
+            frame.body = (SessionPacket) packet;
+            sendPacket(frame, immediate);
+            return;
+        }
+
+        //If the packet cannot be put into single frame set packet, split it.
+        int maxSize = MTU
+                - FrameSetPacket.OVERHEAD_LENGTH
+                - FramePacket.OVERHEAD_LENGTH
+                - reliability.length();
+        if (packet.writerIndex() > maxSize) {
+            int chunkSize = maxSize - FramePacket.FRAGMENT_OVERHEAD_LENGTH;
+            while (packet.isReadable()) {
+                ByteBuf buf = packet.readBytes(Math.min(chunkSize, packet.readableBytes()));
+                FramePacket frame = new FramePacket();
+                frame.fragmented = true;
+                frame.fragment = buf;
+                frame.reliability = reliability;
+                frame.indexReliable = outboundIndexReliable++;
+                if (reliability.isSequenced()) {
+                    frame.indexSequenced = outboundIndexSequenced++;
+                } else if (reliability.isOrdered()) {
+                    frame.indexOrdered = outboundIndexOrdered++;
+                }
+                sendPacket(frame, immediate);
+            }
+        } else {
+            FramePacket frame = new FramePacket();
+            frame.body = (SessionPacket) packet;
+            frame.reliability = reliability;
+            frame.indexReliable = outboundIndexReliable++;
+            if (reliability.isSequenced()) {
+                frame.indexSequenced = outboundIndexSequenced++;
+            } else if (reliability.isOrdered()) {
+                frame.indexOrdered = outboundIndexOrdered++;
+            }
+            sendPacket(frame, immediate);
+        }
+    }
+
+    @Override
+    public int getTimeOut() {
+        return state() == SessionState.CONNECTED ? 10000 : 3000;
     }
 
     protected abstract boolean packetReceived(SessionPacket packet);

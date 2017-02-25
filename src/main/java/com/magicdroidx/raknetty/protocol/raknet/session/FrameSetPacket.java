@@ -12,6 +12,8 @@ import java.util.List;
 public final class FrameSetPacket extends SessionPacket {
     public static final int ID = 0x84; //Notice: It should be 0x80 to 0x8d, but the client often uses 0x84 and it works.
 
+    public static int OVERHEAD_LENGTH = 1 + 3; //ID and Frame Index
+
     public int index;
     public List<FramePacket> frames = new ArrayList<>();
 
@@ -51,7 +53,7 @@ public final class FrameSetPacket extends SessionPacket {
     }
 
     public int length() {
-        int length = 1 + 3; //ID and Frame Index
+        int length = OVERHEAD_LENGTH;
         for (FramePacket frame : frames) {
             length += frame.length();
         }

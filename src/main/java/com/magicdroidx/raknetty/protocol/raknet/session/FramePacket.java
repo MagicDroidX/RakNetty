@@ -9,21 +9,25 @@ import io.netty.buffer.ByteBuf;
  * Author: MagicDroidX
  */
 public class FramePacket extends Packet {
+
+    public static final int OVERHEAD_LENGTH = 1 + 2; //flags and length
+    public static final int FRAGMENT_OVERHEAD_LENGTH = 4 + 2 + 4; //fragmentCount, fragmentID and fragmentIndex
+
     public Reliability reliability;
     public boolean fragmented;
 
     //Only if reliable
-    public int frameIndexReliable;
+    public int indexReliable;
 
     //Only if sequenced
-    public int frameIndexSequenced;
+    public int indexSequenced;
 
     //Only if ordered
-    public int frameIndexOrdered;
+    public int indexOrdered;
     public int orderChannel;
 
     //Only if fragmented
-    public int fragmentSize;
+    public int fragmentCount;
     public int fragmentID;
     public int fragmentIndex;
     public ByteBuf fragment;
@@ -39,6 +43,10 @@ public class FramePacket extends Packet {
         super(buf);
     }
 
+    public void encodeBody() {
+        body.encode();
+    }
+
     @Override
     public void decode() {
         //Frame Packet has no id, do not call super method to move the readerIndex to 1.
@@ -49,20 +57,20 @@ public class FramePacket extends Packet {
         int length = (int) Math.ceil(readUnsignedShort() / 8d);
 
         if (reliability.isReliable()) {
-            frameIndexReliable = readUnsignedMediumLE();
+            indexReliable = readUnsignedMediumLE();
         }
 
         if (reliability.isSequenced()) {
-            frameIndexSequenced = readUnsignedMediumLE();
+            indexSequenced = readUnsignedMediumLE();
         }
 
         if (reliability.isOrdered()) {
-            frameIndexOrdered = readUnsignedMediumLE();
+            indexOrdered = readUnsignedMediumLE();
             orderChannel = readUnsignedByte();
         }
 
         if (fragmented) {
-            fragmentSize = readInt();
+            fragmentCount = readInt();
             fragmentID = readUnsignedShort();
             fragmentIndex = readInt();
             fragment = readBytes(length);
@@ -81,7 +89,8 @@ public class FramePacket extends Packet {
         if (fragmented) {
             buf = fragment;
         } else {
-            body.encode();
+            //Notice: We do not encode the body here to get rid of double encoding in most cases.
+            //body.encode();
             buf = body;
         }
         buf = buf.copy(0, buf.writerIndex());
@@ -94,20 +103,20 @@ public class FramePacket extends Packet {
         writeShort(buf.writerIndex() * 8);
 
         if (reliability.isReliable()) {
-            writeMediumLE(frameIndexReliable);
+            writeMediumLE(indexReliable);
         }
 
         if (reliability.isSequenced()) {
-            writeMediumLE(frameIndexSequenced);
+            writeMediumLE(indexSequenced);
         }
 
         if (reliability.isOrdered()) {
-            writeMediumLE(frameIndexOrdered);
+            writeMediumLE(indexOrdered);
             writeByte(orderChannel);
         }
 
         if (fragmented) {
-            writeInt(fragmentSize);
+            writeInt(fragmentCount);
             writeShort(fragmentID);
             writeInt(fragmentIndex);
         }
@@ -117,20 +126,9 @@ public class FramePacket extends Packet {
     }
 
     public int length() {
-        int length = 1 + 2; //flags and length
+        int length = OVERHEAD_LENGTH;
 
-        if (reliability.isReliable()) {
-            length += 3;
-        }
-
-        if (reliability.isSequenced()) {
-            length += 3;
-        }
-
-        if (reliability.isOrdered()) {
-            length += 3;
-            length += 1;
-        }
+        length += reliability.length();
 
         if (fragmented) {
             length += 4;

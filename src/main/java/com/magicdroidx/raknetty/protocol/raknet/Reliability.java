@@ -29,14 +29,32 @@ public enum Reliability {
     boolean reliable;
     boolean ordered;
     boolean sequenced;
-    boolean needACK;
+    boolean withAckReceipt;
 
     Reliability(int id, boolean reliable, boolean ordered, boolean sequenced, boolean needACK) {
         this.id = id;
         this.reliable = reliable;
         this.ordered = ordered;
         this.sequenced = sequenced;
-        this.needACK = needACK;
+        this.withAckReceipt = needACK;
+    }
+
+    public int length() {
+        int length = 0;
+        if (isReliable()) {
+            length += 3;
+        }
+
+        if (isSequenced()) {
+            length += 3;
+        }
+
+        if (isOrdered()) {
+            length += 3;
+            length += 1;
+        }
+
+        return length;
     }
 
     public int id() {
@@ -55,12 +73,11 @@ public enum Reliability {
         return sequenced;
     }
 
-    public boolean needAck() {
-        return needACK;
+    public boolean withAckReceipt() {
+        return withAckReceipt;
     }
 
     private final static HashMap<Integer, Reliability> lookUpMap = new HashMap<>();
-    private final static int length = values().length;
 
     static {
         for (Reliability reliability : values()) {

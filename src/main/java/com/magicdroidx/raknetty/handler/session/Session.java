@@ -1,5 +1,7 @@
 package com.magicdroidx.raknetty.handler.session;
 
+import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
+import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 import com.magicdroidx.raknetty.protocol.raknet.session.SessionPacket;
 
 import java.net.InetSocketAddress;
@@ -28,4 +30,7 @@ public interface Session {
 
     void handle(SessionPacket packet);
 
+    void sendPacket(RakNetPacket packet, Reliability reliability);
+
+    void sendPacket(RakNetPacket packet, Reliability reliability, boolean immediate);
 }

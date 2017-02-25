@@ -2,6 +2,7 @@ package com.magicdroidx.raknetty.handler.session;
 
 import com.google.common.base.Preconditions;
 import com.magicdroidx.raknetty.RakNetty;
+import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 import com.magicdroidx.raknetty.protocol.raknet.session.*;
 import com.magicdroidx.raknetty.protocol.raknet.unconnected.IncompatibleProtocolPacket;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,11 +31,6 @@ public class ServerSession extends AbstractSession {
     }
 
     @Override
-    public int getTimeOut() {
-        return 3000;
-    }
-
-    @Override
     protected boolean packetReceived(SessionPacket conn) {
 
         //Handle Connection Request 1
@@ -47,7 +43,7 @@ public class ServerSession extends AbstractSession {
                 IncompatibleProtocolPacket response = new IncompatibleProtocolPacket();
                 response.protocolVersion = RakNetty.PROTOCOL_VERSION;
                 response.serverGUID = server().uuid().getMostSignificantBits();
-                sendPacket(response);
+                sendPacket(response, Reliability.UNRELIABLE);
                 this.close("Incompatible Protocol: " + request.protocolVersion);
                 return false;
             }
@@ -60,7 +56,7 @@ public class ServerSession extends AbstractSession {
             ConnectionResponsePacket1 response = new ConnectionResponsePacket1();
             response.MTU = request.MTU;
             response.serverGUID = server().uuid().getMostSignificantBits();
-            sendPacket(response);
+            sendPacket(response, Reliability.UNRELIABLE, true);
 
             //Set the state to CONNECTING
             this.state = SessionState.CONNECTING;
@@ -81,7 +77,7 @@ public class ServerSession extends AbstractSession {
             response.serverGUID = server().uuid().getMostSignificantBits();
             response.clientAddress = address();
             response.MTU = getMTU();
-            sendPacket(response);
+            sendPacket(response, Reliability.UNRELIABLE, true);
 
             this.state = SessionState.CLIENT_OPENING;
             this.GUID = request.clientGUID;
@@ -100,8 +96,9 @@ public class ServerSession extends AbstractSession {
             response.clientAddress = address;
             response.incomingTimestamp = request.timestamp;
             response.serverTimestamp = System.currentTimeMillis();
-            sendPacket(response);
+            sendPacket(response, Reliability.UNRELIABLE, true);
 
+            this.state = SessionState.HANDSHAKING;
             return true;
         }
 

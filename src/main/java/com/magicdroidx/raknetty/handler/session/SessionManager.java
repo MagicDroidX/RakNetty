@@ -4,7 +4,9 @@ import com.magicdroidx.raknetty.RakNetServer;
 import com.magicdroidx.raknetty.handler.RakNetPacketHandler;
 import com.magicdroidx.raknetty.protocol.raknet.AddressedRakNetPacket;
 import com.magicdroidx.raknetty.protocol.raknet.Reliability;
-import com.magicdroidx.raknetty.protocol.raknet.session.*;
+import com.magicdroidx.raknetty.protocol.raknet.session.ConnectionRequestPacket1;
+import com.magicdroidx.raknetty.protocol.raknet.session.DisconnectPacket;
+import com.magicdroidx.raknetty.protocol.raknet.session.SessionPacket;
 import io.netty.channel.ChannelHandlerContext;
 
 import java.net.InetSocketAddress;
@@ -52,14 +54,7 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
             return;
         }
 
-        //TODO: Send Disconnect Packet
-        FrameSetPacket frameSet = new FrameSetPacket();
-        FramePacket frame = new FramePacket();
-        frame.reliability = Reliability.RELIABLE_ORDERED;
-        frame.body = new DisconnectPacket();
-        frameSet.frames().add(frame);
-        //frame.index = 0x0;
-        ctx.writeAndFlush(frameSet.envelop(session.address()));
+        session.sendPacket(new DisconnectPacket(), Reliability.UNRELIABLE, true);
         sessions.remove(session.address());
         System.out.println("Closed a session due to " + reason);
     }
