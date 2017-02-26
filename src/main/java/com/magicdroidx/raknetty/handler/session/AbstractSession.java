@@ -59,7 +59,7 @@ public abstract class AbstractSession implements Session {
         this.sessionManager = sessionManager;
         this.address = address;
         this.ctx = ctx;
-        tickTask = ctx.executor().scheduleAtFixedRate(this::update0, 20, 50, TimeUnit.MILLISECONDS);
+        tickTask = ctx.executor().scheduleAtFixedRate(this::update0, 10, 10, TimeUnit.MILLISECONDS);
     }
 
     private void update0() {
@@ -70,7 +70,59 @@ public abstract class AbstractSession implements Session {
 
         idle = true;
 
+        PacketFuture packetFuture;
+
+        FrameSetPacket frameSet = null;
+        while ((packetFuture = resendQueue.poll()) != null) {
+            if (packetFuture.sendTime() >= currentTime) {
+                //No packet to send
+                break;
+            }
+
+            if (packetFuture instanceof FrameSetPacketFuture) {
+                FrameSetPacketFuture setFuture = (FrameSetPacketFuture) packetFuture;
+                ctx.writeAndFlush(setFuture.packet());
+                setFuture.sendTime(currentTime + getLatency());
+                continue;
+            }
+
+            if (packetFuture instanceof FramePacketFuture) {
+                FramePacketFuture frameFuture = (FramePacketFuture) packetFuture;
+
+                if (frameSet == null) {
+                    frameSet = new FrameSetPacket();
+                    frameSet.index = outboundIndexFrameSet++;
+                }
+
+                FramePacket packet = frameFuture.packet();
+                if (frameSet.length() + packet.length() > getMTU()) {
+                    //Send the frame set first
+                    FrameSetPacketFuture setFuture = new FrameSetPacketFuture(frameSet, currentTime);
+                    resendQueue.add(setFuture);
+
+                    //Create new frame set
+                    frameSet = new FrameSetPacket();
+                    frameSet.index = outboundIndexFrameSet++;
+                }
+
+                frameSet.frames().add(packet);
+            }
+        }
+
+        if (frameSet != null) {
+            ctx.writeAndFlush(frameSet); //Send it immediately
+            FrameSetPacketFuture future = new FrameSetPacketFuture(frameSet, currentTime + getLatency());
+            resendQueue.add(future);
+        }
+
+        //TODO: ACK and NACK
+
         this.update();
+    }
+
+    public int getLatency() {
+        //TODO
+        return 1000;
     }
 
     @Override
@@ -105,7 +157,7 @@ public abstract class AbstractSession implements Session {
     public void close(String reason) {
         sessionManager.close(this, reason);
         tickTask.cancel(true);
-        sendPacket(new DisconnectPacket(), Reliability.UNRELIABLE);
+        sendPacket(new DisconnectPacket(), Reliability.UNRELIABLE, true);
     }
 
     @Override
@@ -144,7 +196,7 @@ public abstract class AbstractSession implements Session {
             frameSet.frames().add(packet);
             ctx.writeAndFlush(frameSet.envelop(address));
         } else {
-            resendQueue.add(new FramePacketFuture(packet, packet.reliability, System.currentTimeMillis()));
+            resendQueue.add(new FramePacketFuture(packet, System.currentTimeMillis(), packet.reliability));
         }
     }
 
@@ -160,7 +212,7 @@ public abstract class AbstractSession implements Session {
             if (immediate) {
                 ctx.writeAndFlush(packet.envelop(address));
             } else {
-                resendQueue.add(new FrameSetPacketFuture((FrameSetPacket) packet, reliability, present));
+                resendQueue.add(new FrameSetPacketFuture((FrameSetPacket) packet, present));
             }
             return;
         }

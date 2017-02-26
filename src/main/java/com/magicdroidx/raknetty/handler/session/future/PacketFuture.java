@@ -1,7 +1,6 @@
 package com.magicdroidx.raknetty.handler.session.future;
 
 import com.magicdroidx.raknetty.protocol.Packet;
-import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 
 /**
  * raknetty Project
@@ -10,12 +9,10 @@ import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 public class PacketFuture<I extends Packet> implements Comparable<PacketFuture> {
 
     private I packet;
-    private Reliability reliability;
     private long sendTime;
 
-    PacketFuture(I packet, Reliability reliability, long sendTime) {
+    PacketFuture(I packet, long sendTime) {
         this.packet = packet;
-        this.reliability = reliability;
         this.sendTime = sendTime;
     }
 
@@ -37,9 +34,5 @@ public class PacketFuture<I extends Packet> implements Comparable<PacketFuture> 
 
     public void sendTime(long sendTime) {
         this.sendTime = sendTime;
-    }
-
-    public Reliability reliability() {
-        return reliability;
     }
 }

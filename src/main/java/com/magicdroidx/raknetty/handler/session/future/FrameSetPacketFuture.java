@@ -10,8 +10,8 @@ import com.magicdroidx.raknetty.protocol.raknet.session.FrameSetPacket;
  */
 public class FrameSetPacketFuture extends PacketFuture<FrameSetPacket> {
 
-    public FrameSetPacketFuture(FrameSetPacket packet, Reliability reliability, long sendTime) {
-        super(packet, reliability, sendTime);
+    public FrameSetPacketFuture(FrameSetPacket packet, long sendTime) {
+        super(packet, sendTime);
     }
 
     @Override

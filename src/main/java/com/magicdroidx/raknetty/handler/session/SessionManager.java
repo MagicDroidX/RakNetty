@@ -54,7 +54,6 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
             return;
         }
 
-        session.sendPacket(new DisconnectPacket(), Reliability.UNRELIABLE, true);
         sessions.remove(session.address());
         System.out.println("Closed a session due to " + reason);
     }
