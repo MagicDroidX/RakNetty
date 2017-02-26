@@ -12,12 +12,20 @@ public class SessionPacket extends RakNetPacket {
     public static SessionPacket from(ByteBuf buf) {
         int id = buf.getByte(0) & 0xff;
 
-        if (id >= 0x80 && id <= 8f) {
+        if (id >= 0x80 && id <= 0x8f) {
             throw new IllegalStateException("FrameSetPacket in FramePacket");
         }
         switch (id) {
+            case ConnectedPingPacket.ID:
+                return new ConnectedPingPacket(buf);
+            case ConnectedPongPacket.ID:
+                return new ConnectedPongPacket(buf);
             case ConnectionRequestPacket.ID:
                 return new ConnectionRequestPacket(buf);
+            case ConnectionRequestAcceptedPacket.ID:
+                return new ConnectionRequestAcceptedPacket(buf);
+            case NewIncomingConnectionPacket.ID:
+                return new NewIncomingConnectionPacket(buf);
             default:
                 return new SessionPacket(buf);
         }

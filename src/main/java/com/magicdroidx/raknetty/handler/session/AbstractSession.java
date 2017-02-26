@@ -51,6 +51,10 @@ public abstract class AbstractSession implements Session {
     private int outboundIndexSequenced;
     private int outboundFragmentID;
 
+    //Latency
+    private long lastPingTime = System.currentTimeMillis();
+    private int latency = 1000;
+
     private AcknowledgePacket ACK = AcknowledgePacket.newACK();
     private AcknowledgePacket NACK = AcknowledgePacket.newNACK();
 
@@ -62,9 +66,23 @@ public abstract class AbstractSession implements Session {
     }
 
     private void update0() {
+        if (state() == SessionState.CLOSED) {
+            tickTask.cancel(true);
+            return;
+        }
+
         long currentTime = System.currentTimeMillis();
         if (isIdle() && currentTime - lastUpdateTime >= this.getTimeOut()) {
             this.close("Timeout");
+        }
+
+        if (currentTime - lastPingTime >= 2000) {
+            //Calculate latency every 2 seconds
+            lastPingTime = currentTime;
+            ConnectedPingPacket ping = new ConnectedPingPacket();
+            ping.timestamp = currentTime;
+            sendPacket(ping, Reliability.UNRELIABLE, true);
+            return;
         }
 
         idle = true;
@@ -72,6 +90,7 @@ public abstract class AbstractSession implements Session {
         PacketFuture packetFuture;
 
         FrameSetPacket frameSet = null;
+
         while ((packetFuture = resendQueue.poll()) != null) {
             if (packetFuture.sendTime() >= currentTime) {
                 //No packet to send
@@ -113,7 +132,6 @@ public abstract class AbstractSession implements Session {
             ctx.writeAndFlush(frameSet.envelop(address)); //Send it immediately
             FrameSetPacketFuture future = new FrameSetPacketFuture(frameSet, currentTime + getLatency());
             resendQueue.add(future);
-            System.out.println("Added a frame set to queue\n" + resendQueue);
         }
 
         //TODO: ACK and NACK
@@ -122,8 +140,7 @@ public abstract class AbstractSession implements Session {
     }
 
     public int getLatency() {
-        //TODO
-        return 1000;
+        return this.latency;
     }
 
     @Override
@@ -156,9 +173,9 @@ public abstract class AbstractSession implements Session {
 
     @Override
     public void close(String reason) {
+        sendPacket(new DisconnectionNotificationPacket(), Reliability.UNRELIABLE, true);
         sessionManager.close(this, reason);
         tickTask.cancel(true);
-        sendPacket(new DisconnectionNotificationPacket(), Reliability.UNRELIABLE);
     }
 
     @Override
@@ -189,6 +206,22 @@ public abstract class AbstractSession implements Session {
             return;
         }
 
+        if (packet instanceof ConnectedPingPacket) {
+            ConnectedPongPacket response = new ConnectedPongPacket();
+            response.timestamp = ((ConnectedPingPacket) packet).timestamp;
+            sendPacket(response, Reliability.UNRELIABLE, true);
+            return;
+        }
+
+        if (packet instanceof ConnectedPongPacket) {
+            if (((ConnectedPongPacket) packet).timestamp == lastPingTime) {
+                double diff = System.currentTimeMillis() - lastPingTime;
+                latency = (int) (diff / 2);
+                System.out.println("Latency: " + latency + "ms");
+            }
+            return;
+        }
+
         if (packet instanceof FrameSetPacket) {
             FrameSetPacket frameSet = (FrameSetPacket) packet;
             for (FramePacket frame : frameSet.frames()) {
@@ -199,6 +232,11 @@ public abstract class AbstractSession implements Session {
                     handle(frame.body);
                 }
             }
+
+            //TODO: Real ACK
+            AcknowledgePacket ACK = AcknowledgePacket.newACK();
+            ACK.records().add(frameSet.index);
+            sendPacket(ACK, Reliability.UNRELIABLE);
 
             return;
         }

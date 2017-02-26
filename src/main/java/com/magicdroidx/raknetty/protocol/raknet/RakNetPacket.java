@@ -40,6 +40,7 @@ public class RakNetPacket extends Packet {
             case AcknowledgePacket.ID_ACK:
             case AcknowledgePacket.ID_NACK:
                 return AcknowledgePacket.from(buf);
+
             default:
                 return new RakNetPacket(buf);
         }

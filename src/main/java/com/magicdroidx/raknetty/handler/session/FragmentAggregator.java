@@ -45,6 +45,8 @@ public class FragmentAggregator {
             }
         }
 
+        fragmentPool.remove(fragmentID);
+
         ByteBuf fullBuf = Unpooled.copiedBuffer(fragments);
 
         session.handle(SessionPacket.from(fullBuf));

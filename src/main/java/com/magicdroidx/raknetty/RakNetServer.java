@@ -54,11 +54,10 @@ public class RakNetServer {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     AddressedRakNetPacket<RakNetPacket> packet = (AddressedRakNetPacket<RakNetPacket>) msg;
-                                    System.out.println(msg);
                                     RakNetPacket buf = packet.content();
                                     byte[] bytes = new byte[buf.writerIndex()];
                                     buf.getBytes(0, bytes);
-                                    System.out.println(BaseEncoding.base16().withPadChar(' ').encode(bytes));
+                                    System.out.println("Unhandled: " + BaseEncoding.base16().withSeparator(" ", 2).encode(bytes));
                                 }
 
                                 @Override

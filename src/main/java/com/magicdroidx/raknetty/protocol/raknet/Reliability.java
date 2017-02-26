@@ -31,12 +31,12 @@ public enum Reliability {
     boolean sequenced;
     boolean withAckReceipt;
 
-    Reliability(int id, boolean reliable, boolean ordered, boolean sequenced, boolean needACK) {
+    Reliability(int id, boolean reliable, boolean ordered, boolean sequenced, boolean withAckReceipt) {
         this.id = id;
         this.reliable = reliable;
         this.ordered = ordered;
         this.sequenced = sequenced;
-        this.withAckReceipt = needACK;
+        this.withAckReceipt = withAckReceipt;
     }
 
     public int length() {
