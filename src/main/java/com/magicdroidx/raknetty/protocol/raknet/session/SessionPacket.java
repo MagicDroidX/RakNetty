@@ -16,8 +16,8 @@ public class SessionPacket extends RakNetPacket {
             throw new IllegalStateException("FrameSetPacket in FramePacket");
         }
         switch (id) {
-            case ClientConnectPacket.ID:
-                return new ClientConnectPacket(buf);
+            case ConnectionRequestPacket.ID:
+                return new ConnectionRequestPacket(buf);
             default:
                 return new SessionPacket(buf);
         }

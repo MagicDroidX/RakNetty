@@ -12,8 +12,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.ScheduledFuture;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Iterator;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -36,6 +35,7 @@ public abstract class AbstractSession implements Session {
     private long lastUpdateTime = System.currentTimeMillis();
 
     private PriorityBlockingQueue<PacketFuture> resendQueue = new PriorityBlockingQueue<>();
+    private FragmentAggregator aggregator = new FragmentAggregator(this);
 
     //Inbound indexes
     private int inboundIndexFrameSet;
@@ -51,9 +51,8 @@ public abstract class AbstractSession implements Session {
     private int outboundIndexSequenced;
     private int outboundFragmentID;
 
-    private List<Integer> indexAcknowledged = new ArrayList<>();
-    private List<Integer> indexNotAcknowledged = new ArrayList<>();
-
+    private AcknowledgePacket ACK = AcknowledgePacket.newACK();
+    private AcknowledgePacket NACK = AcknowledgePacket.newNACK();
 
     AbstractSession(SessionManager sessionManager, InetSocketAddress address, ChannelHandlerContext ctx) {
         this.sessionManager = sessionManager;
@@ -76,12 +75,13 @@ public abstract class AbstractSession implements Session {
         while ((packetFuture = resendQueue.poll()) != null) {
             if (packetFuture.sendTime() >= currentTime) {
                 //No packet to send
+                resendQueue.add(packetFuture);
                 break;
             }
 
             if (packetFuture instanceof FrameSetPacketFuture) {
                 FrameSetPacketFuture setFuture = (FrameSetPacketFuture) packetFuture;
-                ctx.writeAndFlush(setFuture.packet());
+                ctx.writeAndFlush(setFuture.packet().envelop(address));
                 setFuture.sendTime(currentTime + getLatency());
                 continue;
             }
@@ -110,9 +110,10 @@ public abstract class AbstractSession implements Session {
         }
 
         if (frameSet != null) {
-            ctx.writeAndFlush(frameSet); //Send it immediately
+            ctx.writeAndFlush(frameSet.envelop(address)); //Send it immediately
             FrameSetPacketFuture future = new FrameSetPacketFuture(frameSet, currentTime + getLatency());
             resendQueue.add(future);
+            System.out.println("Added a frame set to queue\n" + resendQueue);
         }
 
         //TODO: ACK and NACK
@@ -157,16 +158,44 @@ public abstract class AbstractSession implements Session {
     public void close(String reason) {
         sessionManager.close(this, reason);
         tickTask.cancel(true);
-        sendPacket(new DisconnectPacket(), Reliability.UNRELIABLE, true);
+        sendPacket(new DisconnectionNotificationPacket(), Reliability.UNRELIABLE);
     }
 
     @Override
     public final void handle(SessionPacket packet) {
+        if (packet instanceof AcknowledgePacket) {
+            AcknowledgePacket acknowledgePacket = (AcknowledgePacket) packet;
+
+            Iterator<PacketFuture> iterator = resendQueue.iterator();
+            while (iterator.hasNext()) {
+                PacketFuture future = iterator.next();
+                if (future instanceof FrameSetPacketFuture) {
+                    int index = ((FrameSetPacketFuture) future).frameSetIndex();
+
+                    if (acknowledgePacket.records().contains(index)) {
+                        if (acknowledgePacket.isACK()) {
+                            System.out.println("ACKed " + index);
+                            iterator.remove();
+                        }
+
+                        if (acknowledgePacket.isNACK()) {
+                            System.out.println("NACKed " + index);
+                            future.sendTime(System.currentTimeMillis());
+                        }
+                    }
+                }
+            }
+
+            return;
+        }
+
         if (packet instanceof FrameSetPacket) {
-            //TODO: a lot work here
             FrameSetPacket frameSet = (FrameSetPacket) packet;
             for (FramePacket frame : frameSet.frames()) {
-                if (!frame.fragmented) {
+                if (frame.fragmented) {
+                    aggregator.offer(frame);
+                } else {
+                    //TODO: Ordered and sequenced
                     handle(frame.body);
                 }
             }
@@ -234,9 +263,11 @@ public abstract class AbstractSession implements Session {
                 - reliability.length();
         if (packet.writerIndex() > maxSize) {
             int chunkSize = maxSize - FramePacket.FRAGMENT_OVERHEAD_LENGTH;
+            int fragmentID = outboundFragmentID++;
             while (packet.isReadable()) {
                 ByteBuf buf = packet.readBytes(Math.min(chunkSize, packet.readableBytes()));
                 FramePacket frame = new FramePacket();
+                frame.fragmentID = fragmentID;
                 frame.fragmented = true;
                 frame.fragment = buf;
                 frame.reliability = reliability;

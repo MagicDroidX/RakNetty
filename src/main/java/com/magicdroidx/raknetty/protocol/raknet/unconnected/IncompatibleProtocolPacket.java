@@ -26,7 +26,7 @@ public final class IncompatibleProtocolPacket extends RakNetPacket {
     public void decode() {
         super.decode();
         protocolVersion = readUnsignedByte();
-        skipBytes(RakNetty.OFFLINE_MESSAGE_DATA_ID.length);
+        skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
         serverGUID = readLong();
     }
 
@@ -34,7 +34,7 @@ public final class IncompatibleProtocolPacket extends RakNetPacket {
     public void encode() {
         super.encode();
         writeByte(protocolVersion);
-        writeBytes(RakNetty.OFFLINE_MESSAGE_DATA_ID);
+        writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
         writeLong(serverGUID);
     }
 }

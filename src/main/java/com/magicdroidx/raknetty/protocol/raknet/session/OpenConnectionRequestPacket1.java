@@ -7,7 +7,7 @@ import io.netty.buffer.ByteBuf;
  * RakNetty Project
  * Author: MagicDroidX
  */
-public final class ConnectionRequestPacket1 extends SessionPacket implements FramelessPacket{
+public final class OpenConnectionRequestPacket1 extends SessionPacket implements FramelessPacket{
     public static final int ID = 0x05;
 
     @SuppressWarnings({"PointlessArithmeticExpression", "WeakerAccess"})
@@ -20,18 +20,18 @@ public final class ConnectionRequestPacket1 extends SessionPacket implements Fra
     public int protocolVersion;
     public int MTU;
 
-    public ConnectionRequestPacket1() {
-        super(ConnectionRequestPacket1.ID);
+    public OpenConnectionRequestPacket1() {
+        super(OpenConnectionRequestPacket1.ID);
     }
 
-    public ConnectionRequestPacket1(ByteBuf buf) {
+    public OpenConnectionRequestPacket1(ByteBuf buf) {
         super(buf);
     }
 
     @Override
     public void decode() {
         super.decode();
-        skipBytes(RakNetty.OFFLINE_MESSAGE_DATA_ID.length);
+        skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
         protocolVersion = readUnsignedByte();
         MTU = readableBytes() + MTU_PADDING;
     }
@@ -39,7 +39,7 @@ public final class ConnectionRequestPacket1 extends SessionPacket implements Fra
     @Override
     public void encode() {
         super.encode();
-        writeBytes(RakNetty.OFFLINE_MESSAGE_DATA_ID);
+        writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
         writeByte(protocolVersion);
         writeZero(MTU - MTU_PADDING);
     }

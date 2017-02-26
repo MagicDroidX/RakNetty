@@ -25,18 +25,21 @@ public class RakNetPacket extends Packet {
         switch (id) {
             case UnconnectedPingPacket.ID:
                 return new UnconnectedPingPacket(buf);
-            case ConnectionRequestPacket1.ID:
-                return new ConnectionRequestPacket1(buf);
-            case ConnectionResponsePacket1.ID:
-                return new ConnectionResponsePacket1(buf);
-            case ConnectionRequestPacket2.ID:
-                return new ConnectionRequestPacket2(buf);
-            case ConnectionResponsePacket2.ID:
-                return new ConnectionResponsePacket2(buf);
+            case OpenConnectionRequestPacket1.ID:
+                return new OpenConnectionRequestPacket1(buf);
+            case OpenConnectionResponsePacket1.ID:
+                return new OpenConnectionResponsePacket1(buf);
+            case OpenConnectionRequestPacket2.ID:
+                return new OpenConnectionRequestPacket2(buf);
+            case OpenConnectionResponsePacket2.ID:
+                return new OpenConnectionResponsePacket2(buf);
             case IncompatibleProtocolPacket.ID:
                 return new IncompatibleProtocolPacket(buf);
             case UnconnectedPongPacket.ID:
                 return new UnconnectedPongPacket(buf);
+            case AcknowledgePacket.ID_ACK:
+            case AcknowledgePacket.ID_NACK:
+                return AcknowledgePacket.from(buf);
             default:
                 return new RakNetPacket(buf);
         }

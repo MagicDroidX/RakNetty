@@ -6,18 +6,18 @@ import io.netty.buffer.ByteBuf;
  * RakNetty Project
  * Author: MagicDroidX
  */
-public final class ClientConnectPacket extends SessionPacket {
+public final class ConnectionRequestPacket extends SessionPacket {
     public static final int ID = 0x09;
 
     public long clientGUID;
     public long timestamp;
-    public boolean useSecurity;
+    public boolean hasSecurity;
 
-    public ClientConnectPacket() {
-        super(ClientConnectPacket.ID);
+    public ConnectionRequestPacket() {
+        super(ConnectionRequestPacket.ID);
     }
 
-    public ClientConnectPacket(ByteBuf buf) {
+    public ConnectionRequestPacket(ByteBuf buf) {
         super(buf);
     }
 
@@ -26,7 +26,7 @@ public final class ClientConnectPacket extends SessionPacket {
         super.decode();
         clientGUID = readLong();
         timestamp = readLong();
-        useSecurity = readBoolean();
+        hasSecurity = readBoolean();
     }
 
     @Override
@@ -34,6 +34,6 @@ public final class ClientConnectPacket extends SessionPacket {
         super.encode();
         writeLong(clientGUID);
         writeLong(timestamp);
-        writeBoolean(useSecurity);
+        writeBoolean(hasSecurity);
     }
 }

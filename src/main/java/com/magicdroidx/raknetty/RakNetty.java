@@ -6,7 +6,7 @@ package com.magicdroidx.raknetty;
  */
 public class RakNetty {
 
-    public static final byte[] OFFLINE_MESSAGE_DATA_ID = new byte[]{
+    public static final byte[] OFFLINE_MESSAGE_ID = new byte[]{
             (byte) 0x00, (byte) 0xff, (byte) 0xff, (byte) 0x00,
             (byte) 0xfe, (byte) 0xfe, (byte) 0xfe, (byte) 0xfe,
             (byte) 0xfd, (byte) 0xfd, (byte) 0xfd, (byte) 0xfd,

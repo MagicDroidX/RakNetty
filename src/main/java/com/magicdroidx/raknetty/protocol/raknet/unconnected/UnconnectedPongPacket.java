@@ -28,7 +28,7 @@ public class UnconnectedPongPacket extends RakNetPacket {
         super.decode();
         pingId = readLong();
         serverGUID = readLong();
-        skipBytes(RakNetty.OFFLINE_MESSAGE_DATA_ID.length);
+        skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
         serverName = readCharSequence();
     }
 
@@ -37,7 +37,7 @@ public class UnconnectedPongPacket extends RakNetPacket {
         super.encode();
         writeLong(pingId);
         writeLong(serverGUID);
-        writeBytes(RakNetty.OFFLINE_MESSAGE_DATA_ID);
+        writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
         writeCharSequence(serverName);
     }
 }

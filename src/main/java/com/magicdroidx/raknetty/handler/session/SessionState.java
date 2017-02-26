@@ -6,8 +6,8 @@ package com.magicdroidx.raknetty.handler.session;
  */
 public enum SessionState {
     UNCONNECTED,
-    CONNECTING,
-    CLIENT_OPENING,
-    HANDSHAKING,
+    CONNECTION_OPENING,
+    CONNECTION_REQUESTING,
+    CONNECTION_REQUEST_ACCEPTED,
     CONNECTED
 }

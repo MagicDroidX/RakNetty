@@ -3,9 +3,7 @@ package com.magicdroidx.raknetty.handler.session;
 import com.magicdroidx.raknetty.RakNetServer;
 import com.magicdroidx.raknetty.handler.RakNetPacketHandler;
 import com.magicdroidx.raknetty.protocol.raknet.AddressedRakNetPacket;
-import com.magicdroidx.raknetty.protocol.raknet.Reliability;
-import com.magicdroidx.raknetty.protocol.raknet.session.ConnectionRequestPacket1;
-import com.magicdroidx.raknetty.protocol.raknet.session.DisconnectPacket;
+import com.magicdroidx.raknetty.protocol.raknet.session.OpenConnectionRequestPacket1;
 import com.magicdroidx.raknetty.protocol.raknet.session.SessionPacket;
 import io.netty.channel.ChannelHandlerContext;
 
@@ -38,7 +36,11 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
         return sessions.containsKey(address);
     }
 
-    public Session get(InetSocketAddress address, boolean create) {
+    public Session get(InetSocketAddress address) {
+        return get(address, false);
+    }
+
+    Session get(InetSocketAddress address, boolean create) {
         Session session = sessions.get(address);
         if (session == null && create) {
             session = new ServerSession(this, address, ctx);
@@ -47,6 +49,13 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
         }
 
         return session;
+    }
+
+    public void close(InetSocketAddress address, String reason) {
+        Session session = this.get(address);
+        if (session != null) {
+            session.close(reason);
+        }
     }
 
     void close(Session session, String reason) {
@@ -63,7 +72,7 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
         this.ctx = ctx;
         SessionPacket conn = p.content();
         InetSocketAddress sender = p.sender();
-        Session session = get(sender, conn instanceof ConnectionRequestPacket1);
+        Session session = get(sender, conn instanceof OpenConnectionRequestPacket1);
 
         if (session instanceof ServerSession) {
             session.handle(conn);

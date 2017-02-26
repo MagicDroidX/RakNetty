@@ -9,7 +9,7 @@ import java.util.Arrays;
  * RakNetty Project
  * Author: MagicDroidX
  */
-public final class ServerHandshakePacket extends SessionPacket {
+public final class ConnectionRequestAcceptedPacket extends SessionPacket {
     public static final int ID = 0x10;
 
     public InetSocketAddress clientAddress;
@@ -18,12 +18,12 @@ public final class ServerHandshakePacket extends SessionPacket {
     public long incomingTimestamp;
     public long serverTimestamp;
 
-    public ServerHandshakePacket() {
-        super(ServerHandshakePacket.ID);
+    public ConnectionRequestAcceptedPacket() {
+        super(ConnectionRequestAcceptedPacket.ID);
         Arrays.fill(addresses, new InetSocketAddress("255.255.255.255", 19132));
     }
 
-    public ServerHandshakePacket(ByteBuf buf) {
+    public ConnectionRequestAcceptedPacket(ByteBuf buf) {
         super(buf);
         Arrays.fill(addresses, new InetSocketAddress("255.255.255.255", 19132));
     }

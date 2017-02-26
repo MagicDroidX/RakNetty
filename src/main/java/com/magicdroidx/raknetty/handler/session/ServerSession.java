@@ -34,8 +34,8 @@ public class ServerSession extends AbstractSession {
     protected boolean packetReceived(SessionPacket conn) {
 
         //Handle Connection Request 1
-        if (conn instanceof ConnectionRequestPacket1 && this.state() == SessionState.UNCONNECTED) {
-            ConnectionRequestPacket1 request = (ConnectionRequestPacket1) conn;
+        if (conn instanceof OpenConnectionRequestPacket1 && this.state() == SessionState.UNCONNECTED) {
+            OpenConnectionRequestPacket1 request = (OpenConnectionRequestPacket1) conn;
             System.out.println("Connection Request 1 (protocolVersion=" + request.protocolVersion + ", MTU=" + request.MTU + ")");
 
             //If the protocol is incompatible
@@ -53,19 +53,19 @@ public class ServerSession extends AbstractSession {
             setMTU(request.MTU);
 
             //Response to the client
-            ConnectionResponsePacket1 response = new ConnectionResponsePacket1();
+            OpenConnectionResponsePacket1 response = new OpenConnectionResponsePacket1();
             response.MTU = request.MTU;
             response.serverGUID = server().uuid().getMostSignificantBits();
-            sendPacket(response, Reliability.UNRELIABLE, true);
+            sendPacket(response, Reliability.UNRELIABLE);
 
-            //Set the state to CONNECTING
-            this.state = SessionState.CONNECTING;
+            //Set the state to CONNECTION_OPENING
+            this.state = SessionState.CONNECTION_OPENING;
             return true;
         }
 
         //Handle Connection Request 2
-        if (conn instanceof ConnectionRequestPacket2 && this.state() == SessionState.CONNECTING) {
-            ConnectionRequestPacket2 request = (ConnectionRequestPacket2) conn;
+        if (conn instanceof OpenConnectionRequestPacket2 && this.state() == SessionState.CONNECTION_OPENING) {
+            OpenConnectionRequestPacket2 request = (OpenConnectionRequestPacket2) conn;
             System.out.println("Connection Request 2 (serverAddress=" + request.serverAddress + ", MTU=" + request.MTU + ", ClientGUID=" + request.clientGUID + ")");
 
             //CheckMTU
@@ -73,32 +73,32 @@ public class ServerSession extends AbstractSession {
             setMTU(request.MTU);
 
             //Response to the client
-            ConnectionResponsePacket2 response = new ConnectionResponsePacket2();
+            OpenConnectionResponsePacket2 response = new OpenConnectionResponsePacket2();
             response.serverGUID = server().uuid().getMostSignificantBits();
             response.clientAddress = address();
             response.MTU = getMTU();
-            sendPacket(response, Reliability.UNRELIABLE, true);
+            sendPacket(response, Reliability.UNRELIABLE);
 
-            this.state = SessionState.CLIENT_OPENING;
+            this.state = SessionState.CONNECTION_REQUESTING;
             this.GUID = request.clientGUID;
             return true;
         }
 
-        if (conn instanceof ClientConnectPacket && this.state() == SessionState.CLIENT_OPENING) {
-            ClientConnectPacket request = (ClientConnectPacket) conn;
-            System.out.println("Client Connect(clientGUID=" + request.clientGUID + ", timestamp=" + request.timestamp + ", security=" + request.useSecurity + ")");
+        if (conn instanceof ConnectionRequestPacket && this.state() == SessionState.CONNECTION_REQUESTING) {
+            ConnectionRequestPacket request = (ConnectionRequestPacket) conn;
+            System.out.println("Client Connect(clientGUID=" + request.clientGUID + ", timestamp=" + request.timestamp + ", security=" + request.hasSecurity + ")");
 
             //Check ClientGUID
             Preconditions.checkState(GUID == request.clientGUID, "Client GUID does not match");
 
             //Response to the client
-            ServerHandshakePacket response = new ServerHandshakePacket();
+            ConnectionRequestAcceptedPacket response = new ConnectionRequestAcceptedPacket();
             response.clientAddress = address;
             response.incomingTimestamp = request.timestamp;
             response.serverTimestamp = System.currentTimeMillis();
-            sendPacket(response, Reliability.UNRELIABLE, true);
+            sendPacket(response, Reliability.UNRELIABLE);
 
-            this.state = SessionState.HANDSHAKING;
+            this.state = SessionState.CONNECTION_REQUEST_ACCEPTED;
             return true;
         }
 

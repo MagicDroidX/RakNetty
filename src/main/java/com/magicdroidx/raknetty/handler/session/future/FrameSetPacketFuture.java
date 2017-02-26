@@ -1,7 +1,5 @@
 package com.magicdroidx.raknetty.handler.session.future;
 
-import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
-import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 import com.magicdroidx.raknetty.protocol.raknet.session.FrameSetPacket;
 
 /**
@@ -17,5 +15,19 @@ public class FrameSetPacketFuture extends PacketFuture<FrameSetPacket> {
     @Override
     public FrameSetPacket packet() {
         return super.packet();
+    }
+
+    public int frameSetIndex() {
+        return packet().index;
+    }
+
+    @SuppressWarnings("SimplifiableIfStatement")
+    @Override
+    public boolean equals(Object obj) {
+        if (obj instanceof FrameSetPacketFuture) {
+            return ((FrameSetPacketFuture) obj).frameSetIndex() == frameSetIndex();
+        }
+
+        return false;
     }
 }
