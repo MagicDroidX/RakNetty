@@ -1,5 +1,6 @@
 package com.magicdroidx.raknetty.handler.session;
 
+import com.google.common.io.BaseEncoding;
 import com.magicdroidx.raknetty.RakNetServer;
 import com.magicdroidx.raknetty.handler.session.future.FramePacketFuture;
 import com.magicdroidx.raknetty.handler.session.future.FrameSetPacketFuture;
@@ -41,8 +42,11 @@ public abstract class AbstractSession implements Session {
     private int inboundIndexFrameSet;
     private int inboundIndexReliable;
     private int inboundIndexOrdered;
-    private int inboundIndexSequenced;
+    private int inboundIndexSequenced = -1;
     private int inboundFragmentID;
+    private IndexWindow frameSetWindow = new IndexWindow();
+    private IndexWindow reliableWindow = new IndexWindow();
+
 
     //Outbound indexes
     private int outboundIndexFrameSet;
@@ -53,10 +57,7 @@ public abstract class AbstractSession implements Session {
 
     //Latency
     private long lastPingTime = System.currentTimeMillis();
-    private int latency = 1000;
-
-    private AcknowledgePacket ACK = AcknowledgePacket.newACK();
-    private AcknowledgePacket NACK = AcknowledgePacket.newNACK();
+    private int latency = 200;
 
     AbstractSession(SessionManager sessionManager, InetSocketAddress address, ChannelHandlerContext ctx) {
         this.sessionManager = sessionManager;
@@ -101,7 +102,7 @@ public abstract class AbstractSession implements Session {
             if (packetFuture instanceof FrameSetPacketFuture) {
                 FrameSetPacketFuture setFuture = (FrameSetPacketFuture) packetFuture;
                 ctx.writeAndFlush(setFuture.packet().envelop(address));
-                setFuture.sendTime(currentTime + getLatency());
+                setFuture.setSendTime(currentTime + getLatency());
                 continue;
             }
 
@@ -115,7 +116,7 @@ public abstract class AbstractSession implements Session {
 
                 FramePacket packet = frameFuture.packet();
                 if (frameSet.length() + packet.length() > getMTU()) {
-                    //Send the frame set first
+                    //Send the old frame set first
                     FrameSetPacketFuture setFuture = new FrameSetPacketFuture(frameSet, currentTime);
                     resendQueue.add(setFuture);
 
@@ -130,12 +131,24 @@ public abstract class AbstractSession implements Session {
 
         if (frameSet != null) {
             ctx.writeAndFlush(frameSet.envelop(address)); //Send it immediately
+            //Add it to resend queue
             FrameSetPacketFuture future = new FrameSetPacketFuture(frameSet, currentTime + getLatency());
             resendQueue.add(future);
         }
 
-        //TODO: ACK and NACK
+        AcknowledgePacket ACK = AcknowledgePacket.newACK();
+        ACK.records.addAll(frameSetWindow.getOpened());
+        if (!ACK.records.isEmpty()) {
+            sendPacket(ACK, Reliability.UNRELIABLE, true);
+        }
 
+        AcknowledgePacket NACK = AcknowledgePacket.newNACK();
+        NACK.records.addAll(frameSetWindow.getClosed());
+        if (!NACK.records.isEmpty()) {
+            sendPacket(NACK, Reliability.UNRELIABLE, true);
+        }
+
+        frameSetWindow.update();
         this.update();
     }
 
@@ -191,13 +204,13 @@ public abstract class AbstractSession implements Session {
 
                     if (acknowledgePacket.records().contains(index)) {
                         if (acknowledgePacket.isACK()) {
-                            System.out.println("ACKed " + index);
+                            System.out.println("In: ACKed " + index);
                             iterator.remove();
                         }
 
                         if (acknowledgePacket.isNACK()) {
-                            System.out.println("NACKed " + index);
-                            future.sendTime(System.currentTimeMillis());
+                            System.out.println("In: NACKed " + index);
+                            future.setSendTime(System.currentTimeMillis());
                         }
                     }
                 }
@@ -215,8 +228,7 @@ public abstract class AbstractSession implements Session {
 
         if (packet instanceof ConnectedPongPacket) {
             if (((ConnectedPongPacket) packet).timestamp == lastPingTime) {
-                double diff = System.currentTimeMillis() - lastPingTime;
-                latency = (int) (diff / 2);
+                latency = (int) (System.currentTimeMillis() - lastPingTime);
                 System.out.println("Latency: " + latency + "ms");
             }
             return;
@@ -224,19 +236,29 @@ public abstract class AbstractSession implements Session {
 
         if (packet instanceof FrameSetPacket) {
             FrameSetPacket frameSet = (FrameSetPacket) packet;
+
+            if (!frameSetWindow.openWindow(frameSet.index)) {
+                return;
+            }
+
             for (FramePacket frame : frameSet.frames()) {
+                //TODO: ??? necessary?
+                /*if (frame.reliability.isReliable()) {
+                    reliableWindow.openWindow(frame.indexReliable);
+                }*/
+
                 if (frame.fragmented) {
                     aggregator.offer(frame);
                 } else {
-                    //TODO: Ordered and sequenced
+                    if (frame.reliability.isSequenced()) {
+                        if (frame.indexSequenced > inboundIndexSequenced) {
+                            inboundIndexSequenced = frame.indexSequenced;
+                        }
+                    }
+                    //TODO: Ordered
                     handle(frame.body);
                 }
             }
-
-            //TODO: Real ACK
-            AcknowledgePacket ACK = AcknowledgePacket.newACK();
-            ACK.records().add(frameSet.index);
-            sendPacket(ACK, Reliability.UNRELIABLE);
 
             return;
         }
@@ -245,6 +267,7 @@ public abstract class AbstractSession implements Session {
             this.lastUpdateTime = System.currentTimeMillis();
             this.idle = false;
         }
+
     }
 
     protected void sendPacket(FramePacket packet) {

@@ -30,9 +30,7 @@ public class ServerSession extends AbstractSession {
 
     }
 
-    @Override
-    protected boolean packetReceived(SessionPacket conn) {
-
+    private boolean handshake(SessionPacket conn) {
         //Handle Connection Request 1
         if (conn instanceof OpenConnectionRequestPacket1 && this.state() == SessionState.UNCONNECTED) {
             OpenConnectionRequestPacket1 request = (OpenConnectionRequestPacket1) conn;
@@ -109,6 +107,20 @@ public class ServerSession extends AbstractSession {
             System.out.println("Congratulations! The session has been established!!!!");
 
             this.state = SessionState.CONNECTED;
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    protected boolean packetReceived(SessionPacket conn) {
+        if (handshake(conn)) {
+            return true;
+        }
+
+        if (conn instanceof GameWrapperPacket) {
+            conn.decode();
             return true;
         }
 

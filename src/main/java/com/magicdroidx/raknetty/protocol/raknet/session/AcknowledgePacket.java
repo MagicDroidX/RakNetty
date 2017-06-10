@@ -1,6 +1,7 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -50,8 +51,11 @@ public final class AcknowledgePacket extends SessionPacket implements FramelessP
     @Override
     public void encode() {
         super.encode();
-        writeShort(records.size());
-        Integer[] records = this.records.stream().toArray(Integer[]::new);
+        ByteBuf buf = Unpooled.buffer();
+
+        int recodeCnt = 0;
+
+        Integer[] records = this.records.toArray(new Integer[0]);
         Arrays.sort(records);
 
         for (int i = 0; i < records.length; i++) {
@@ -64,14 +68,19 @@ public final class AcknowledgePacket extends SessionPacket implements FramelessP
             }
 
             if (indexStart == indexEnd) {
-                writeBoolean(true); //No range
-                writeMediumLE(indexStart);
+                buf.writeBoolean(true); //No range
+                buf.writeMediumLE(indexStart);
+                recodeCnt++;
             } else {
-                writeBoolean(false); //Range
-                writeMediumLE(indexStart);
-                writeMediumLE(indexEnd);
+                buf.writeBoolean(false); //Range
+                buf.writeMediumLE(indexStart);
+                buf.writeMediumLE(indexEnd);
+                recodeCnt++;
             }
         }
+
+        writeShort(recodeCnt);
+        writeBytes(buf);
     }
 
     public boolean isACK() {

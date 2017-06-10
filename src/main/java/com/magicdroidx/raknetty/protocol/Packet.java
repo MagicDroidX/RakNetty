@@ -1,5 +1,6 @@
 package com.magicdroidx.raknetty.protocol;
 
+import com.magicdroidx.raknetty.io.VarIntInput;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -46,6 +47,42 @@ public class Packet extends ByteBuf {
             this.buf = buf;
             this.id = this.getByte(0) & 0xff;
         }
+    }
+
+    public int readVarInt() {
+        return VarIntInput.decodeZigZag32(readUnsignedVarInt());
+    }
+
+    public int readUnsignedVarInt()  {
+        int value = 0;
+        int size = 0;
+        int b;
+        while (((b = this.readByte()) & 0x80) == 0x80) {
+            value |= (b & 0x7F) << (size++ * 7);
+            if (size > 5) {
+                throw new IllegalStateException("VarInt too big");
+            }
+        }
+
+        return value | ((b & 0x7F) << (size * 7));
+    }
+
+    public long readVarLong() {
+        return VarIntInput.decodeZigZag64(readUnsignedVarLong());
+    }
+
+    public long readUnsignedVarLong() {
+        long value = 0;
+        int size = 0;
+        int b;
+        while (((b = this.readByte()) & 0x80) == 0x80) {
+            value |= (long) (b & 0x7F) << (size++ * 7);
+            if (size > 10) {
+                throw new IllegalStateException("VarLong too big");
+            }
+        }
+
+        return value | ((long) (b & 0x7F) << (size * 7));
     }
 
     public int id() {
@@ -1072,6 +1109,14 @@ public class Packet extends ByteBuf {
 
     public CharSequence readCharSequence() {
         return readCharSequence(Charset.forName("UTF-8"));
+    }
+
+    public CharSequence readCharSequenceLE(Charset charset) {
+        return readCharSequence(readUnsignedShortLE(), charset);
+    }
+
+    public CharSequence readCharSequenceLE() {
+        return readCharSequenceLE(Charset.forName("UTF-8"));
     }
 
     /**

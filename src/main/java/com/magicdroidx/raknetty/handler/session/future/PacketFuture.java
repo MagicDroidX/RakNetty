@@ -34,13 +34,16 @@ public class PacketFuture<I extends Packet> implements Comparable<PacketFuture>,
         return sendTime;
     }
 
-    public void sendTime(long sendTime) {
+    public void setSendTime(long sendTime) {
         this.sendTime = sendTime;
     }
 
     @Override
     public String toString() {
-        return this.getClass().getSimpleName() + "(packet=" + packet + ", sendTime=" + sendTime + ")";
+        return "PacketFuture{" +
+                "packet=" + packet +
+                ", sendTime=" + sendTime +
+                '}';
     }
 
     /**

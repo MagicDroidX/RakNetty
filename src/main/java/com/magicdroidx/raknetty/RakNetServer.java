@@ -53,8 +53,8 @@ public class RakNetServer {
                             pipeline.addLast("Unhandled", new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                    AddressedRakNetPacket<RakNetPacket> packet = (AddressedRakNetPacket<RakNetPacket>) msg;
-                                    RakNetPacket buf = packet.content();
+                                    AddressedRakNetPacket packet = (AddressedRakNetPacket) msg;
+                                    RakNetPacket buf = (RakNetPacket) packet.content();
                                     byte[] bytes = new byte[buf.writerIndex()];
                                     buf.getBytes(0, bytes);
                                     System.out.println("Unhandled: " + BaseEncoding.base16().withSeparator(" ", 2).encode(bytes));

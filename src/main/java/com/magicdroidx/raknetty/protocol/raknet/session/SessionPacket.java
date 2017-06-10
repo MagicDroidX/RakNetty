@@ -15,6 +15,7 @@ public class SessionPacket extends RakNetPacket {
         if (id >= 0x80 && id <= 0x8f) {
             throw new IllegalStateException("FrameSetPacket in FramePacket");
         }
+
         switch (id) {
             case ConnectedPingPacket.ID:
                 return new ConnectedPingPacket(buf);
@@ -26,6 +27,8 @@ public class SessionPacket extends RakNetPacket {
                 return new ConnectionRequestAcceptedPacket(buf);
             case NewIncomingConnectionPacket.ID:
                 return new NewIncomingConnectionPacket(buf);
+            case GameWrapperPacket.ID:
+                return new GameWrapperPacket(buf);
             default:
                 return new SessionPacket(buf);
         }
