@@ -58,6 +58,10 @@ public class ServerSession extends AbstractSession {
 
             //Set the state to CONNECTION_OPENING
             this.state = SessionState.CONNECTION_OPENING;
+
+            if (this.listener != null) {
+                this.listener.registered(this);
+            }
             return true;
         }
 
@@ -107,6 +111,10 @@ public class ServerSession extends AbstractSession {
             System.out.println("Congratulations! The session has been established!!!!");
 
             this.state = SessionState.CONNECTED;
+
+            if (this.listener != null) {
+                this.listener.connected(this);
+            }
             return true;
         }
 
@@ -116,11 +124,6 @@ public class ServerSession extends AbstractSession {
     @Override
     protected boolean packetReceived(SessionPacket conn) {
         if (handshake(conn)) {
-            return true;
-        }
-
-        if (conn instanceof GameWrapperPacket) {
-            conn.decode();
             return true;
         }
 

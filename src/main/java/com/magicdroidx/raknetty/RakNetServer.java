@@ -5,6 +5,7 @@ import com.magicdroidx.raknetty.handler.UnconnectedPingHandler;
 import com.magicdroidx.raknetty.handler.codec.RakNetPacketDecoder;
 import com.magicdroidx.raknetty.handler.codec.RakNetPacketEncoder;
 import com.magicdroidx.raknetty.handler.session.SessionManager;
+import com.magicdroidx.raknetty.listener.ServerListener;
 import com.magicdroidx.raknetty.protocol.raknet.AddressedRakNetPacket;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
 import io.netty.bootstrap.Bootstrap;
@@ -28,6 +29,8 @@ public class RakNetServer {
 
     private int MTU;
 
+    private ServerListener listener;
+
     public RakNetServer() throws IOException {
         MTU = NetworkInterface.getByInetAddress(InetAddress.getLocalHost()).getMTU();
     }
@@ -47,7 +50,7 @@ public class RakNetServer {
                             pipeline.addLast("UnconnectedPingHandler", new UnconnectedPingHandler(RakNetServer.this));
                             pipeline.addLast(worker, "SessionHandler", new SessionManager(RakNetServer.this));
                             //用户自定义Session处理器 onSessionEstablished() 完成握手建立连接事件
-                            //                        onPacketReceived(GamePacket packet) 获得来自客户端的包
+                            //                        packetReceived(GamePacket packet) 获得来自客户端的包
                             //                        sendPacket(GamePacket packet) 回复包
                             //                        onSessionClosed() 关闭连接事件
                             pipeline.addLast("Unhandled", new ChannelInboundHandlerAdapter() {
@@ -77,6 +80,14 @@ public class RakNetServer {
             boss.shutdownGracefully();
             worker.shutdownGracefully();
         }
+    }
+
+    public void setListener(ServerListener listener) {
+        this.listener = listener;
+    }
+
+    public ServerListener listener() {
+        return listener;
     }
 
     public UUID uuid() {

@@ -27,15 +27,13 @@ public class LoginPacket extends GamePacket {
     @Override
     public void decode() {
         super.decode();
-        System.out.println("I am daq login");
+
         protocolVersion = readInt();
         edition = readUnsignedByte();
 
         ByteBuf buf = readBytes(readUnsignedVarInt());
         chainData = buf.readCharSequence(buf.readIntLE(), Charsets.UTF_8);
         skinData = buf.readCharSequence(buf.readIntLE(), Charsets.UTF_8);
-
-        System.out.println(toString());
     }
 
     @Override

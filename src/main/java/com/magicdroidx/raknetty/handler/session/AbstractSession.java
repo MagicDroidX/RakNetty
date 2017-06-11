@@ -1,10 +1,10 @@
 package com.magicdroidx.raknetty.handler.session;
 
-import com.google.common.io.BaseEncoding;
 import com.magicdroidx.raknetty.RakNetServer;
 import com.magicdroidx.raknetty.handler.session.future.FramePacketFuture;
 import com.magicdroidx.raknetty.handler.session.future.FrameSetPacketFuture;
 import com.magicdroidx.raknetty.handler.session.future.PacketFuture;
+import com.magicdroidx.raknetty.listener.SessionListener;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
 import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 import com.magicdroidx.raknetty.protocol.raknet.session.*;
@@ -28,6 +28,7 @@ public abstract class AbstractSession implements Session {
     InetSocketAddress address;
     long GUID;
 
+    SessionListener listener;
     SessionManager sessionManager;
     ChannelHandlerContext ctx;
     private ScheduledFuture tickTask;
@@ -189,6 +190,10 @@ public abstract class AbstractSession implements Session {
         sendPacket(new DisconnectionNotificationPacket(), Reliability.UNRELIABLE, true);
         sessionManager.close(this, reason);
         tickTask.cancel(true);
+
+        if (this.listener != null) {
+            this.listener.disconnected(this);
+        }
     }
 
     @Override
@@ -263,11 +268,23 @@ public abstract class AbstractSession implements Session {
             return;
         }
 
+        if (packet instanceof GameWrapperPacket) {
+            packet.decode();
+
+            if (this.listener != null) {
+                this.listener.packetReceived(this, ((GameWrapperPacket) packet).body);
+            }
+
+            this.lastUpdateTime = System.currentTimeMillis();
+            this.idle = false;
+
+            return;
+        }
+
         if (this.packetReceived(packet)) {
             this.lastUpdateTime = System.currentTimeMillis();
             this.idle = false;
         }
-
     }
 
     protected void sendPacket(FramePacket packet) {
@@ -360,4 +377,14 @@ public abstract class AbstractSession implements Session {
     }
 
     protected abstract boolean packetReceived(SessionPacket packet);
+
+    @Override
+    public void setListener(SessionListener listener) {
+        this.listener = listener;
+    }
+
+    @Override
+    public SessionListener listener() {
+        return this.listener;
+    }
 }

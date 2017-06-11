@@ -1,5 +1,10 @@
 package com.magicdroidx.raknetty;
 
+import com.magicdroidx.raknetty.handler.session.Session;
+import com.magicdroidx.raknetty.listener.ServerListener;
+import com.magicdroidx.raknetty.listener.SessionListenerAdapter;
+import com.magicdroidx.raknetty.protocol.game.GamePacket;
+
 /**
  * RakNetty Project
  * Author: MagicDroidX
@@ -17,6 +22,22 @@ public class RakNetty {
 
     public static void main(String[] args) throws Exception {
         RakNetServer server = new RakNetServer();
+        server.setListener(new ServerListener() {
+            @Override
+            public void onSessionCreated(Session session) {
+                session.setListener(new SessionListenerAdapter() {
+                    @Override
+                    public void packetReceived(Session session, GamePacket packet) {
+                        System.out.println("Received a game packet: " + packet);
+                    }
+                });
+            }
+
+            @Override
+            public void onSessionRemoved(Session session) {
+                System.out.println("Session closed: " + session.address());
+            }
+        });
         server.run();
     }
 }

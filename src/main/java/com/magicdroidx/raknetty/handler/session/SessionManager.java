@@ -43,9 +43,13 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
     Session get(InetSocketAddress address, boolean create) {
         Session session = sessions.get(address);
         if (session == null && create) {
+
             session = new ServerSession(this, address, ctx);
             this.sessions.put(address, (ServerSession) session);
-            System.out.println("Create new session for " + session.address());
+
+            if (server().listener() != null) {
+                server().listener().onSessionCreated(session);
+            }
         }
 
         return session;
@@ -64,7 +68,9 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
         }
 
         sessions.remove(session.address());
-        System.out.println("Closed a session due to " + reason);
+        if (server().listener() != null) {
+            server().listener().onSessionRemoved(session);
+        }
     }
 
     @Override
