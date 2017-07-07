@@ -24,6 +24,7 @@ public class VarIntInputStream extends DataInputStream implements VarIntInput {
         int value = 0;
         int size = 0;
         int b;
+
         while (((b = this.readByte()) & 0x80) == 0x80) {
             value |= (b & 0x7F) << (size++ * 7);
             if (size > 5) {
