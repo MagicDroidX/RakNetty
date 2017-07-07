@@ -1,7 +1,7 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
-import com.google.common.io.ByteStreams;
 import com.magicdroidx.raknetty.io.VarIntInputStream;
+import com.magicdroidx.raknetty.io.VarIntOutputStream;
 import com.magicdroidx.raknetty.protocol.game.GamePacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
@@ -9,10 +9,9 @@ import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.util.zip.DeflaterInputStream;
+import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
 /**
@@ -34,7 +33,6 @@ public class GameWrapperPacket extends SessionPacket {
 
     @Override
     public void decode() {
-        System.out.println("Decoding");
         super.decode();
         VarIntInputStream in = new VarIntInputStream(new BufferedInputStream(new InflaterInputStream(new ByteBufInputStream(this))));
 
@@ -52,14 +50,14 @@ public class GameWrapperPacket extends SessionPacket {
     public void encode() {
         super.encode();
         body.encode();
-        //writeBytes(body);
-        InputStream in = new DeflaterInputStream(new ByteBufInputStream(body));
-        OutputStream out = new ByteBufOutputStream(this);
+        VarIntOutputStream out = new VarIntOutputStream(new BufferedOutputStream(new DeflaterOutputStream(new ByteBufOutputStream(this))));
+        byte[] bytes = new byte[body.readableBytes()];
+        body.readBytes(bytes);
         try {
-            int numberOfBytes = (int) ByteStreams.copy(in, out);
-            writerIndex(readerIndex() + numberOfBytes);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            out.writeUnsignedVarInt(bytes.length);
+            out.write(bytes);
+        } catch (IOException ignored) {
         }
+
     }
 }
