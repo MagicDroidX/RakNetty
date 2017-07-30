@@ -49,10 +49,6 @@ public class RakNetServer {
                             pipeline.addLast("RakNetEncoder", new RakNetPacketEncoder());
                             pipeline.addLast("UnconnectedPingHandler", new UnconnectedPingHandler(RakNetServer.this));
                             pipeline.addLast(worker, "SessionHandler", new SessionManager(RakNetServer.this));
-                            //用户自定义Session处理器 onSessionEstablished() 完成握手建立连接事件
-                            //                        packetReceived(GamePacket packet) 获得来自客户端的包
-                            //                        sendPacket(GamePacket packet) 回复包
-                            //                        onSessionClosed() 关闭连接事件
                             pipeline.addLast("Unhandled", new ChannelInboundHandlerAdapter() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {

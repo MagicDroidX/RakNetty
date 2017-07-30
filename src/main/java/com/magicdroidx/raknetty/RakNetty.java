@@ -27,8 +27,23 @@ public class RakNetty {
             public void onSessionCreated(Session session) {
                 session.setListener(new SessionListenerAdapter() {
                     @Override
+                    public void registered(Session session) {
+                        System.out.println("New session created: " + session.address());
+                    }
+
+                    @Override
+                    public void connected(Session session) {
+                        System.out.println("Connection with " + session.address() + " has been established.");
+                    }
+
+                    @Override
                     public void packetReceived(Session session, GamePacket packet) {
                         System.out.println("Received a game packet: " + packet);
+                    }
+
+                    @Override
+                    public void disconnected(Session session) {
+                        System.out.println(session.address() + "disconnected.");
                     }
                 });
             }
