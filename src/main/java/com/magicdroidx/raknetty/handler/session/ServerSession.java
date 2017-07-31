@@ -34,7 +34,6 @@ public class ServerSession extends AbstractSession {
         //Handle Connection Request 1
         if (conn instanceof OpenConnectionRequestPacket1 && this.state() == SessionState.UNCONNECTED) {
             OpenConnectionRequestPacket1 request = (OpenConnectionRequestPacket1) conn;
-            System.out.println("Open Connection Request 1 (protocolVersion=" + request.protocolVersion + ", MTU=" + request.MTU + ")");
 
             //If the protocol is incompatible
             if (request.protocolVersion != RakNetty.PROTOCOL_VERSION) {
@@ -47,7 +46,7 @@ public class ServerSession extends AbstractSession {
             }
 
             //Check MTU
-            Preconditions.checkState(request.MTU <= sessionManager.server().getMTU(), "Client requested a MTU which exceeds the maximum.");
+            Preconditions.checkState(request.MTU <= sessionManager.server().mtu(), "Client requested a MTU which exceeds the maximum.");
             setMTU(request.MTU);
 
             //Response to the client
@@ -68,7 +67,6 @@ public class ServerSession extends AbstractSession {
         //Handle Connection Request 2
         if (conn instanceof OpenConnectionRequestPacket2 && this.state() == SessionState.CONNECTION_OPENING) {
             OpenConnectionRequestPacket2 request = (OpenConnectionRequestPacket2) conn;
-            System.out.println("Open Connection Request 2 (serverAddress=" + request.serverAddress + ", MTU=" + request.MTU + ", ClientGUID=" + request.clientGUID + ")");
 
             //CheckMTU
             Preconditions.checkState(request.MTU <= getMTU(), "Client requested a MTU which exceeds the maximum.");
@@ -88,7 +86,6 @@ public class ServerSession extends AbstractSession {
 
         if (conn instanceof ConnectionRequestPacket && this.state() == SessionState.CONNECTION_REQUESTING) {
             ConnectionRequestPacket request = (ConnectionRequestPacket) conn;
-            System.out.println("Connection Request(clientGUID=" + request.clientGUID + ", timestamp=" + request.timestamp + ", security=" + request.hasSecurity + ")");
 
             //Check ClientGUID
             Preconditions.checkState(GUID == request.clientGUID, "Client GUID does not match");
@@ -98,6 +95,7 @@ public class ServerSession extends AbstractSession {
             response.clientAddress = address;
             response.incomingTimestamp = request.timestamp;
             response.serverTimestamp = System.currentTimeMillis();
+            response.addresses = server().systemAddresses();
             sendPacket(response, Reliability.UNRELIABLE);
 
             this.state = SessionState.CONNECTION_REQUEST_ACCEPTED;
@@ -106,9 +104,6 @@ public class ServerSession extends AbstractSession {
 
         if (conn instanceof NewIncomingConnectionPacket && this.state() == SessionState.CONNECTION_REQUEST_ACCEPTED) {
             NewIncomingConnectionPacket request = (NewIncomingConnectionPacket) conn;
-            System.out.println("Client Connect(clientAddress=" + request.clientAddress + ", incomingTime=" + request.incomingTimestamp + ", serverTime=" + request.serverTimestamp + ")");
-
-            System.out.println("Congratulations! The session has been established!!!!");
 
             this.state = SessionState.CONNECTED;
 
@@ -124,6 +119,7 @@ public class ServerSession extends AbstractSession {
     @Override
     protected boolean packetReceived(SessionPacket conn) {
         if (handshake(conn)) {
+            System.out.println("Handshaking: " + conn);
             return true;
         }
 

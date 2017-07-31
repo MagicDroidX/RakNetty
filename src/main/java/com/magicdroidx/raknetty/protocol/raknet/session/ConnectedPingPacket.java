@@ -1,6 +1,6 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
-import io.netty.buffer.ByteBuf;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 
 /**
  * RakNetty Project
@@ -15,19 +15,22 @@ public final class ConnectedPingPacket extends SessionPacket {
         super(ID);
     }
 
-    public ConnectedPingPacket(ByteBuf buf) {
-        super(buf);
+    @Override
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        timestamp = in.readLong();
     }
 
     @Override
-    public void decode() {
-        super.decode();
-        timestamp = readLong();
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeLong(timestamp);
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        writeLong(timestamp);
+    public String toString() {
+        return "ConnectedPingPacket{" +
+                "timestamp=" + timestamp +
+                '}';
     }
 }

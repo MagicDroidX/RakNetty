@@ -1,16 +1,15 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
-import com.magicdroidx.raknetty.io.VarIntInputStream;
-import com.magicdroidx.raknetty.io.VarIntOutputStream;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
+import com.magicdroidx.raknetty.io.RakNetInputStream;
+import com.magicdroidx.raknetty.io.RakNetOutputStream;
 import com.magicdroidx.raknetty.protocol.game.GamePacket;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
-import java.io.IOException;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
@@ -27,37 +26,38 @@ public class GameWrapperPacket extends SessionPacket {
         super(GameWrapperPacket.ID);
     }
 
-    public GameWrapperPacket(ByteBuf buf) {
-        super(buf);
-    }
-
     @Override
-    public void decode() {
-        super.decode();
-        VarIntInputStream in = new VarIntInputStream(new BufferedInputStream(new InflaterInputStream(new ByteBufInputStream(this))));
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+
+        RakNetInputStream is = new RakNetInputStream(new InflaterInputStream(new BufferedInputStream(new ByteBufInputStream(in))));
 
         try {
-            int bodySize = in.readUnsignedVarInt();
+            int bodySize = is.readUnsignedVarInt();
             byte[] bytes = new byte[bodySize];
-            in.read(bytes);
+            is.read(bytes);
             body = GamePacket.from(Unpooled.wrappedBuffer(bytes));
-            body.decode();
         } catch (Exception ignored) {
         }
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        body.encode();
-        VarIntOutputStream out = new VarIntOutputStream(new BufferedOutputStream(new DeflaterOutputStream(new ByteBufOutputStream(this))));
-        byte[] bytes = new byte[body.readableBytes()];
-        body.readBytes(bytes);
-        try {
-            out.writeUnsignedVarInt(bytes.length);
-            out.write(bytes);
-        } catch (IOException ignored) {
-        }
+    public void write(RakNetByteBuf out) {
+        super.write(out);
 
+        RakNetOutputStream os = new RakNetOutputStream(new BufferedOutputStream(new DeflaterOutputStream(new ByteBufOutputStream(out))));
+        RakNetByteBuf payload = RakNetByteBuf.buffer();
+        body.write(payload);
+        try {
+            int bodySize = payload.readableBytes();
+            byte[] bytes = new byte[bodySize];
+            payload.readBytes(bytes);
+            os.writeUnsignedVarInt(bodySize);
+            os.write(bytes);
+        } catch (Exception ignored) {
+        } finally {
+            payload.release();
+        }
     }
+
 }

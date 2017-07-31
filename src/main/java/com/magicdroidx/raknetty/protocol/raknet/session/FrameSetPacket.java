@@ -1,6 +1,6 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
-import io.netty.buffer.ByteBuf;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,14 +15,11 @@ public final class FrameSetPacket extends SessionPacket {
     public static int OVERHEAD_LENGTH = 1 + 3; //ID and Frame Index
 
     public int index;
-    public List<FramePacket> frames = new ArrayList<>();
+
+    private List<FramePacket> frames = new ArrayList<>();
 
     public FrameSetPacket() {
         super(FrameSetPacket.ID);
-    }
-
-    public FrameSetPacket(ByteBuf buf) {
-        super(buf);
     }
 
     public List<FramePacket> frames() {
@@ -30,25 +27,22 @@ public final class FrameSetPacket extends SessionPacket {
     }
 
     @Override
-    public void decode() {
-        super.decode();
-        index = readUnsignedMediumLE();
-        while (isReadable()) {
-            FramePacket frame = new FramePacket(copy());
-            frame.decode();
-            readerIndex(readerIndex() + frame.readerIndex()); //Move the readerIndex
-            //TODO: Check if it's necessary: if (frame.body.writerIndex() == 0) break;
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        index = in.readUnsignedMediumLE();
+        while (in.isReadable()) {
+            FramePacket frame = new FramePacket();
+            frame.read(in);
             this.frames.add(frame);
         }
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        writeMediumLE(index);
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeMediumLE(index);
         for (FramePacket frame : frames) {
-            frame.encode();
-            writeBytes(frame.copy(0, frame.writerIndex()));
+            frame.write(out);
         }
     }
 

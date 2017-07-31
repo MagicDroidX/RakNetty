@@ -1,8 +1,8 @@
 package com.magicdroidx.raknetty.protocol.raknet.unconnected;
 
 import com.magicdroidx.raknetty.RakNetty;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
-import io.netty.buffer.ByteBuf;
 
 /**
  * RakNetty Project
@@ -19,25 +19,30 @@ public class UnconnectedPongPacket extends RakNetPacket {
         super(UnconnectedPongPacket.ID);
     }
 
-    public UnconnectedPongPacket(ByteBuf buf) {
-        super(buf);
+    @Override
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        pingId = in.readLong();
+        serverGUID = in.readLong();
+        in.skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
+        serverName = in.readString();
     }
 
     @Override
-    public void decode() {
-        super.decode();
-        pingId = readLong();
-        serverGUID = readLong();
-        skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
-        serverName = readCharSequence();
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeLong(pingId);
+        out.writeLong(serverGUID);
+        out.writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
+        out.writeString(serverName);
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        writeLong(pingId);
-        writeLong(serverGUID);
-        writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
-        writeCharSequence(serverName);
+    public String toString() {
+        return "UnconnectedPongPacket{" +
+                "pingId=" + pingId +
+                ", serverGUID=" + serverGUID +
+                ", serverName=" + serverName +
+                '}';
     }
 }

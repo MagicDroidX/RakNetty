@@ -8,15 +8,15 @@ import java.io.OutputStream;
  * raknetty Project
  * Author: MagicDroidX
  */
-public class VarIntOutputStream extends DataOutputStream implements VarIntOutput {
+public class RakNetOutputStream extends DataOutputStream implements RakNetOutput {
 
-    public VarIntOutputStream(OutputStream out) {
+    public RakNetOutputStream(OutputStream out) {
         super(out);
     }
 
     @Override
     public void writeVarInt(int value) throws IOException {
-        writeUnsignedVarInt(VarIntOutput.encodeZigZag32(value));
+        writeUnsignedVarInt(RakNetOutput.encodeZigZag32(value));
     }
 
     @Override
@@ -34,7 +34,7 @@ public class VarIntOutputStream extends DataOutputStream implements VarIntOutput
 
     @Override
     public void writeVarLong(long value) throws IOException {
-        writeUnsignedVarLong(VarIntOutput.encodeZigZag64(value));
+        writeUnsignedVarLong(RakNetOutput.encodeZigZag64(value));
     }
 
     @Override

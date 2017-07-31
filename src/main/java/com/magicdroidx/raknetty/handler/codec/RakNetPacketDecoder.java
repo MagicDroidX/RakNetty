@@ -16,8 +16,9 @@ public class RakNetPacketDecoder extends MessageToMessageDecoder<DatagramPacket>
 
     @Override
     protected final void decode(ChannelHandlerContext ctx, DatagramPacket msg, List<Object> out) throws Exception {
-        RakNetPacket packet = RakNetPacket.from(msg.content().retain());
-        packet.decode();
+        RakNetPacket packet = RakNetPacket.from(
+                msg.content().retain()
+        );
         out.add(new AddressedRakNetPacket<>(packet, msg.recipient(), msg.sender()));
     }
 }

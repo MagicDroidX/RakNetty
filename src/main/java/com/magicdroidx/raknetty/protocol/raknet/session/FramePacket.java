@@ -1,5 +1,6 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import com.magicdroidx.raknetty.protocol.Packet;
 import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 import io.netty.buffer.ByteBuf;
@@ -8,7 +9,7 @@ import io.netty.buffer.ByteBuf;
  * RakNetty Project
  * Author: MagicDroidX
  */
-public class FramePacket extends Packet {
+public class FramePacket implements Packet {
 
     public static final int OVERHEAD_LENGTH = 1 + 2; //flags and length
     public static final int FRAGMENT_OVERHEAD_LENGTH = 4 + 2 + 4; //fragmentCount, fragmentID and fragmentIndex
@@ -33,95 +34,74 @@ public class FramePacket extends Packet {
     public ByteBuf fragment;
 
     //Only if not fragmented
-    public SessionPacket body;
-
-    public FramePacket() {
-        super(-1);
-    }
-
-    public FramePacket(ByteBuf buf) {
-        super(buf);
-    }
-
-    public void encodeBody() {
-        body.encode();
-    }
+    public ByteBuf body;
 
     @Override
-    public void decode() {
-        //Frame Packet has no id, do not call super method to move the readerIndex to 1.
-
-        int flags = readUnsignedByte();
+    public void read(RakNetByteBuf in) {
+        int flags = in.readUnsignedByte();
         reliability = Reliability.getById((flags & 0b11100000) >> 5);
         fragmented = (flags & 0b00010000) > 0;
-        int length = (int) Math.ceil(readUnsignedShort() / 8d);
+        int length = (int) Math.ceil(in.readUnsignedShort() / 8d);
 
         if (reliability.isReliable()) {
-            indexReliable = readUnsignedMediumLE();
+            indexReliable = in.readUnsignedMediumLE();
         }
 
         if (reliability.isSequenced()) {
-            indexSequenced = readUnsignedMediumLE();
+            indexSequenced = in.readUnsignedMediumLE();
         }
 
         if (reliability.isOrdered()) {
-            indexOrdered = readUnsignedMediumLE();
-            orderChannel = readUnsignedByte();
+            indexOrdered = in.readUnsignedMediumLE();
+            orderChannel = in.readUnsignedByte();
         }
 
         if (fragmented) {
-            fragmentCount = readInt();
-            fragmentID = readUnsignedShort();
-            fragmentIndex = readInt();
-            fragment = readBytes(length);
+            fragmentCount = in.readInt();
+            fragmentID = in.readUnsignedShort();
+            fragmentIndex = in.readInt();
+            fragment = in.readBytes(length);
         } else {
-            body = SessionPacket.from(readBytes(length));
-            body.decode();
+            body = in.readBytes(length);
         }
     }
 
     @Override
-    public void encode() {
-        this.clear();
-        //Frame Packet has no id, do not call super method to write an packet id.
-
+    public void write(RakNetByteBuf out) {
         ByteBuf buf;
         if (fragmented) {
             buf = fragment;
         } else {
-            //Notice: We do not encode the body here to get rid of double encoding in most cases.
-            //body.encode();
             buf = body;
         }
-        buf = buf.copy(0, buf.writerIndex());
 
         int flags = reliability.id() << 5;
         if (fragmented) {
             flags |= 0b00010000;
         }
-        writeByte(flags);
-        writeShort(buf.writerIndex() * 8);
+        out.writeByte(flags);
+        out.writeShort(buf.writerIndex() * 8);
 
         if (reliability.isReliable()) {
-            writeMediumLE(indexReliable);
+            out.writeMediumLE(indexReliable);
         }
 
         if (reliability.isSequenced()) {
-            writeMediumLE(indexSequenced);
+            out.writeMediumLE(indexSequenced);
         }
 
         if (reliability.isOrdered()) {
-            writeMediumLE(indexOrdered);
-            writeByte(orderChannel);
+            out.writeMediumLE(indexOrdered);
+            out.writeByte(orderChannel);
         }
 
         if (fragmented) {
-            writeInt(fragmentCount);
-            writeShort(fragmentID);
-            writeInt(fragmentIndex);
+            out.writeInt(fragmentCount);
+            out.writeShort(fragmentID);
+            out.writeInt(fragmentIndex);
         }
 
-        writeBytes(buf);
+        out.writeBytes(buf);
         buf.release();
     }
 

@@ -1,6 +1,6 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
-import io.netty.buffer.ByteBuf;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 
 /**
  * RakNetty Project
@@ -17,23 +17,28 @@ public final class ConnectionRequestPacket extends SessionPacket {
         super(ConnectionRequestPacket.ID);
     }
 
-    public ConnectionRequestPacket(ByteBuf buf) {
-        super(buf);
+    @Override
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        clientGUID = in.readLong();
+        timestamp = in.readLong();
+        hasSecurity = in.readBoolean();
     }
 
     @Override
-    public void decode() {
-        super.decode();
-        clientGUID = readLong();
-        timestamp = readLong();
-        hasSecurity = readBoolean();
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeLong(clientGUID);
+        out.writeLong(timestamp);
+        out.writeBoolean(hasSecurity);
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        writeLong(clientGUID);
-        writeLong(timestamp);
-        writeBoolean(hasSecurity);
+    public String toString() {
+        return "ConnectionRequestPacket{" +
+                "clientGUID=" + clientGUID +
+                ", timestamp=" + timestamp +
+                ", hasSecurity=" + hasSecurity +
+                '}';
     }
 }

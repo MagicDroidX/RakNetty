@@ -1,7 +1,5 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
-import io.netty.buffer.ByteBuf;
-
 /**
  * RakNetty Project
  * Author: MagicDroidX
@@ -11,9 +9,5 @@ public final class DisconnectionNotificationPacket extends SessionPacket {
 
     public DisconnectionNotificationPacket() {
         super(DisconnectionNotificationPacket.ID);
-    }
-
-    public DisconnectionNotificationPacket(ByteBuf buf) {
-        super(buf);
     }
 }

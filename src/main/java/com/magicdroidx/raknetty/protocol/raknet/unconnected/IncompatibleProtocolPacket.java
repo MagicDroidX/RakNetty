@@ -1,8 +1,8 @@
 package com.magicdroidx.raknetty.protocol.raknet.unconnected;
 
 import com.magicdroidx.raknetty.RakNetty;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
-import io.netty.buffer.ByteBuf;
 
 /**
  * RakNetty Project
@@ -18,23 +18,27 @@ public final class IncompatibleProtocolPacket extends RakNetPacket {
         super(IncompatibleProtocolPacket.ID);
     }
 
-    public IncompatibleProtocolPacket(ByteBuf buf) {
-        super(buf);
+    @Override
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        protocolVersion = in.readUnsignedByte();
+        in.skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
+        serverGUID = in.readLong();
     }
 
     @Override
-    public void decode() {
-        super.decode();
-        protocolVersion = readUnsignedByte();
-        skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
-        serverGUID = readLong();
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeByte(protocolVersion);
+        out.writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
+        out.writeLong(serverGUID);
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        writeByte(protocolVersion);
-        writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
-        writeLong(serverGUID);
+    public String toString() {
+        return "IncompatibleProtocolPacket{" +
+                "protocolVersion=" + protocolVersion +
+                ", serverGUID=" + serverGUID +
+                '}';
     }
 }

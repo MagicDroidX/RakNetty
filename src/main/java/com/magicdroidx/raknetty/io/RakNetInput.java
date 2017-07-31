@@ -8,7 +8,7 @@ import java.io.IOException;
  * Author: MagicDroidX
  */
 
-public interface VarIntInput extends DataInput {
+public interface RakNetInput extends DataInput {
 
     static int decodeZigZag32(final int n) {
         return (n >>> 1) ^ -(n & 1);

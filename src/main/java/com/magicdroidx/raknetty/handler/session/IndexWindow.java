@@ -9,11 +9,9 @@ import java.util.Set;
  */
 public class IndexWindow {
 
+    private static final int MAX_SIZE = 512;
     private int start = -1;
     private int end = -1;
-
-    private static final int MAX_SIZE = 512;
-
     private Set<Integer> opened = new HashSet<>();
 
     public boolean openWindow(int index) {

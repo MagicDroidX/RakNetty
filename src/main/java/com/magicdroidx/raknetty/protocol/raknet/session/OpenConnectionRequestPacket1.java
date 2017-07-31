@@ -1,13 +1,13 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
 import com.magicdroidx.raknetty.RakNetty;
-import io.netty.buffer.ByteBuf;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 
 /**
  * RakNetty Project
  * Author: MagicDroidX
  */
-public final class OpenConnectionRequestPacket1 extends SessionPacket implements FramelessPacket{
+public final class OpenConnectionRequestPacket1 extends SessionPacket implements FramelessPacket {
     public static final int ID = 0x05;
 
     @SuppressWarnings({"PointlessArithmeticExpression", "WeakerAccess"})
@@ -16,7 +16,6 @@ public final class OpenConnectionRequestPacket1 extends SessionPacket implements
             + 16   // Offline Message Data Id
             + 1;   // Protocol Version
 
-
     public int protocolVersion;
     public int MTU;
 
@@ -24,23 +23,27 @@ public final class OpenConnectionRequestPacket1 extends SessionPacket implements
         super(OpenConnectionRequestPacket1.ID);
     }
 
-    public OpenConnectionRequestPacket1(ByteBuf buf) {
-        super(buf);
+    @Override
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        in.skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
+        protocolVersion = in.readUnsignedByte();
+        MTU = in.readableBytes() + MTU_PADDING;
     }
 
     @Override
-    public void decode() {
-        super.decode();
-        skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
-        protocolVersion = readUnsignedByte();
-        MTU = readableBytes() + MTU_PADDING;
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
+        out.writeByte(protocolVersion);
+        out.writeZero(MTU - MTU_PADDING);
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
-        writeByte(protocolVersion);
-        writeZero(MTU - MTU_PADDING);
+    public String toString() {
+        return "OpenConnectionRequestPacket1{" +
+                "protocolVersion=" + protocolVersion +
+                ", MTU=" + MTU +
+                '}';
     }
 }

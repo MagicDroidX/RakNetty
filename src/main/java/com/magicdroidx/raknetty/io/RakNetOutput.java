@@ -7,7 +7,7 @@ import java.io.IOException;
  * raknetty Project
  * Author: MagicDroidX
  */
-public interface VarIntOutput extends DataOutput{
+public interface RakNetOutput extends DataOutput {
 
     public static int encodeZigZag32(final int n) {
         return (n << 1) ^ (n >> 31);

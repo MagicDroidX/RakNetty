@@ -1,7 +1,7 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
 import com.magicdroidx.raknetty.RakNetty;
-import io.netty.buffer.ByteBuf;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 
 import java.net.InetSocketAddress;
 
@@ -9,7 +9,7 @@ import java.net.InetSocketAddress;
  * RakNetty Project
  * Author: MagicDroidX
  */
-public final class OpenConnectionResponsePacket2 extends SessionPacket implements FramelessPacket{
+public final class OpenConnectionResponsePacket2 extends SessionPacket implements FramelessPacket {
     public static final int ID = 0x08;
 
     public long serverGUID;
@@ -20,26 +20,31 @@ public final class OpenConnectionResponsePacket2 extends SessionPacket implement
         super(OpenConnectionResponsePacket2.ID);
     }
 
-    public OpenConnectionResponsePacket2(ByteBuf buf) {
-        super(buf);
+    @Override
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        in.skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
+        serverGUID = in.readLong();
+        clientAddress = in.readAddress();
+        MTU = in.readUnsignedShort();
     }
 
     @Override
-    public void decode() {
-        super.decode();
-        skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
-        serverGUID = readLong();
-        clientAddress = readAddress();
-        MTU = readUnsignedShort();
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
+        out.writeLong(serverGUID);
+        out.writeAddress(clientAddress);
+        out.writeShort(MTU);
+        out.writeBoolean(false); //Encryption
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
-        writeLong(serverGUID);
-        writeAddress(clientAddress);
-        writeShort(MTU);
-        writeBoolean(false); //Encryption
+    public String toString() {
+        return "OpenConnectionResponsePacket2{" +
+                "serverGUID=" + serverGUID +
+                ", clientAddress=" + clientAddress +
+                ", MTU=" + MTU +
+                '}';
     }
 }

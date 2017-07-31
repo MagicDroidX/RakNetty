@@ -1,6 +1,7 @@
 package com.magicdroidx.raknetty.handler.session;
 
 import com.magicdroidx.raknetty.RakNetServer;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import com.magicdroidx.raknetty.handler.session.future.FramePacketFuture;
 import com.magicdroidx.raknetty.handler.session.future.FrameSetPacketFuture;
 import com.magicdroidx.raknetty.handler.session.future.PacketFuture;
@@ -102,7 +103,10 @@ public abstract class AbstractSession implements Session {
 
             if (packetFuture instanceof FrameSetPacketFuture) {
                 FrameSetPacketFuture setFuture = (FrameSetPacketFuture) packetFuture;
-                ctx.writeAndFlush(setFuture.packet().envelop(address));
+
+                //Bypass the RakNetPacketEncoder to avoid double encoding
+                ctx.writeAndFlush(setFuture.envelop(address));
+
                 setFuture.setSendTime(currentTime + getLatency());
                 continue;
             }
@@ -261,7 +265,8 @@ public abstract class AbstractSession implements Session {
                         }
                     }
                     //TODO: Ordered
-                    handle(frame.body);
+
+                    handle(SessionPacket.from(frame.body));
                 }
             }
 
@@ -269,7 +274,6 @@ public abstract class AbstractSession implements Session {
         }
 
         if (packet instanceof GameWrapperPacket) {
-            packet.decode();
 
             if (this.listener != null) {
                 this.listener.packetReceived(this, ((GameWrapperPacket) packet).body);
@@ -324,12 +328,13 @@ public abstract class AbstractSession implements Session {
             return;
         }
 
-        packet.encode();
+        RakNetByteBuf buf = RakNetByteBuf.buffer();
+        packet.write(buf);
 
         if (!reliability.isReliable()) {
             FramePacket frame = new FramePacket();
             frame.reliability = reliability;
-            frame.body = (SessionPacket) packet;
+            frame.body = buf;
             sendPacket(frame, immediate);
             return;
         }
@@ -339,15 +344,15 @@ public abstract class AbstractSession implements Session {
                 - FrameSetPacket.OVERHEAD_LENGTH
                 - FramePacket.OVERHEAD_LENGTH
                 - reliability.length();
-        if (packet.writerIndex() > maxSize) {
+        if (buf.writerIndex() > maxSize) {
             int chunkSize = maxSize - FramePacket.FRAGMENT_OVERHEAD_LENGTH;
             int fragmentID = outboundFragmentID++;
-            while (packet.isReadable()) {
-                ByteBuf buf = packet.readBytes(Math.min(chunkSize, packet.readableBytes()));
+            while (buf.isReadable()) {
+                ByteBuf fragment = buf.readBytes(Math.min(chunkSize, buf.readableBytes()));
                 FramePacket frame = new FramePacket();
                 frame.fragmentID = fragmentID;
                 frame.fragmented = true;
-                frame.fragment = buf;
+                frame.fragment = fragment;
                 frame.reliability = reliability;
                 frame.indexReliable = outboundIndexReliable++;
                 if (reliability.isSequenced()) {
@@ -359,7 +364,7 @@ public abstract class AbstractSession implements Session {
             }
         } else {
             FramePacket frame = new FramePacket();
-            frame.body = (SessionPacket) packet;
+            frame.body = buf;
             frame.reliability = reliability;
             frame.indexReliable = outboundIndexReliable++;
             if (reliability.isSequenced()) {

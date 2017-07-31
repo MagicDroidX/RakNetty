@@ -7,7 +7,7 @@ import com.magicdroidx.raknetty.protocol.game.GamePacket;
  * raknetty Project
  * Author: MagicDroidX
  */
-public class SessionListenerAdapter implements SessionListener{
+public class SessionListenerAdapter implements SessionListener {
     @Override
     public void registered(Session session) {
 

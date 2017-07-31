@@ -27,7 +27,7 @@ public class UnconnectedPingHandler extends RakNetPacketHandler<UnconnectedPingP
         pong.pingId = ping.pingId;
         pong.serverGUID = server.uuid().getMostSignificantBits();
         //TODO: Customize
-        pong.serverName = "MCPE;Hello! RakNetty!;91;1.0.0;0;20;8964;Realm;Creative";
+        pong.serverName = "MCPE;Hello! RakNetty!;113;1.1.4;0;20;8964;Realm;Creative";
 
         ctx.writeAndFlush(new AddressedRakNetPacket<>(pong, p.sender()));
     }

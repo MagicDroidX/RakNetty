@@ -1,8 +1,8 @@
 package com.magicdroidx.raknetty.protocol.raknet.unconnected;
 
 import com.magicdroidx.raknetty.RakNetty;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
-import io.netty.buffer.ByteBuf;
 
 /**
  * RakNetty Project
@@ -18,23 +18,27 @@ public final class UnconnectedPingPacket extends RakNetPacket {
         super(UnconnectedPingPacket.ID);
     }
 
-    public UnconnectedPingPacket(ByteBuf buf) {
-        super(buf);
+    @Override
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        pingId = in.readLong();
+        in.skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
+        clientGUID = in.readLong();
     }
 
     @Override
-    public void decode() {
-        super.decode();
-        pingId = readLong();
-        skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
-        clientGUID = readLong();
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeLong(pingId);
+        out.writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
+        out.writeLong(clientGUID);
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        writeLong(pingId);
-        writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
-        writeLong(clientGUID);
+    public String toString() {
+        return "UnconnectedPingPacket{" +
+                "pingId=" + pingId +
+                ", clientGUID=" + clientGUID +
+                '}';
     }
 }

@@ -1,7 +1,7 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
 import com.magicdroidx.raknetty.RakNetty;
-import io.netty.buffer.ByteBuf;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 
 import java.net.InetSocketAddress;
 
@@ -9,7 +9,7 @@ import java.net.InetSocketAddress;
  * RakNetty Project
  * Author: MagicDroidX
  */
-public final class OpenConnectionRequestPacket2 extends SessionPacket implements FramelessPacket{
+public final class OpenConnectionRequestPacket2 extends SessionPacket implements FramelessPacket {
     public static final int ID = 0x07;
 
     public InetSocketAddress serverAddress;
@@ -20,25 +20,30 @@ public final class OpenConnectionRequestPacket2 extends SessionPacket implements
         super(OpenConnectionRequestPacket2.ID);
     }
 
-    public OpenConnectionRequestPacket2(ByteBuf buf) {
-        super(buf);
+    @Override
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        in.skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
+        serverAddress = in.readAddress();
+        MTU = in.readUnsignedShort();
+        clientGUID = in.readLong();
     }
 
     @Override
-    public void decode() {
-        super.decode();
-        skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
-        serverAddress = readAddress();
-        MTU = readUnsignedShort();
-        clientGUID = readLong();
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
+        out.writeAddress(serverAddress);
+        out.writeByte(MTU);
+        out.writeLong(clientGUID);
     }
 
     @Override
-    public void encode() {
-        super.encode();
-        writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
-        writeAddress(serverAddress);
-        writeByte(MTU);
-        writeLong(clientGUID);
+    public String toString() {
+        return "OpenConnectionRequestPacket2{" +
+                "serverAddress=" + serverAddress +
+                ", MTU=" + MTU +
+                ", clientGUID=" + clientGUID +
+                '}';
     }
 }

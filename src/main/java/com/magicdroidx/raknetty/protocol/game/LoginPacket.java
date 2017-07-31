@@ -1,7 +1,9 @@
 package com.magicdroidx.raknetty.protocol.game;
 
 import com.google.common.base.Charsets;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 
 /**
  * raknetty Project
@@ -20,20 +22,36 @@ public class LoginPacket extends GamePacket {
         super(LoginPacket.ID);
     }
 
-    public LoginPacket(ByteBuf buf) {
-        super(buf);
+    @Override
+    public void read(RakNetByteBuf in) {
+        super.read(in);
+        protocolVersion = in.readInt();
+        edition = in.readUnsignedByte();
+
+        ByteBuf buf = in.readBytes(
+                in.readUnsignedVarInt()
+        );
+
+        chainData = buf.readCharSequence(buf.readIntLE(), Charsets.UTF_8);
+        skinData = buf.readCharSequence(buf.readIntLE(), Charsets.UTF_8);
+        buf.release();
     }
 
     @Override
-    public void decode() {
-        super.decode();
+    public void write(RakNetByteBuf out) {
+        super.write(out);
+        out.writeInt(protocolVersion);
+        out.writeByte(edition);
 
-        protocolVersion = readInt();
-        edition = readUnsignedByte();
+        ByteBuf buf = Unpooled.buffer();
+        buf.writeIntLE(chainData.length());
+        buf.writeCharSequence(chainData, Charsets.UTF_8);
+        buf.writeIntLE(skinData.length());
+        buf.writeCharSequence(skinData, Charsets.UTF_8);
 
-        ByteBuf buf = readBytes(readUnsignedVarInt());
-        chainData = buf.readCharSequence(buf.readIntLE(), Charsets.UTF_8);
-        skinData = buf.readCharSequence(buf.readIntLE(), Charsets.UTF_8);
+        out.writeUnsignedVarInt(buf.writerIndex());
+        out.writeBytes(buf);
+        buf.release();
     }
 
     @Override

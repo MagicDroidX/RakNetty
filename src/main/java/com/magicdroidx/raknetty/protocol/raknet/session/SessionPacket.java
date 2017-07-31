@@ -1,5 +1,6 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
 import io.netty.buffer.ByteBuf;
 
@@ -9,36 +10,46 @@ import io.netty.buffer.ByteBuf;
  */
 public class SessionPacket extends RakNetPacket {
 
+    public SessionPacket(int id) {
+        super(id);
+    }
+
     public static SessionPacket from(ByteBuf buf) {
-        int id = buf.getByte(0) & 0xff;
+
+        RakNetByteBuf in = RakNetByteBuf.wrappedBuffer(buf);
+
+        int id = in.readByte() & 0xff;
 
         if (id >= 0x80 && id <= 0x8f) {
             throw new IllegalStateException("FrameSetPacket in FramePacket");
         }
 
+        SessionPacket packet;
+
         switch (id) {
             case ConnectedPingPacket.ID:
-                return new ConnectedPingPacket(buf);
+                packet = new ConnectedPingPacket();
+                break;
             case ConnectedPongPacket.ID:
-                return new ConnectedPongPacket(buf);
+                packet = new ConnectedPongPacket();
+                break;
             case ConnectionRequestPacket.ID:
-                return new ConnectionRequestPacket(buf);
+                packet = new ConnectionRequestPacket();
+                break;
             case ConnectionRequestAcceptedPacket.ID:
-                return new ConnectionRequestAcceptedPacket(buf);
+                packet = new ConnectionRequestAcceptedPacket();
+                break;
             case NewIncomingConnectionPacket.ID:
-                return new NewIncomingConnectionPacket(buf);
+                packet = new NewIncomingConnectionPacket();
+                break;
             case GameWrapperPacket.ID:
-                return new GameWrapperPacket(buf);
+                packet = new GameWrapperPacket();
+                break;
             default:
-                return new SessionPacket(buf);
+                return new SessionPacket(id);
         }
-    }
 
-    public SessionPacket(int id) {
-        super(id);
-    }
-
-    public SessionPacket(ByteBuf buf) {
-        super(buf);
+        packet.read(in);
+        return packet;
     }
 }

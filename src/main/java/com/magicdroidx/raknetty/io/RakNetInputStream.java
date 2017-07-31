@@ -8,15 +8,15 @@ import java.io.InputStream;
  * raknetty Project
  * Author: MagicDroidX
  */
-public class VarIntInputStream extends DataInputStream implements VarIntInput {
+public class RakNetInputStream extends DataInputStream implements RakNetInput {
 
-    public VarIntInputStream(InputStream in) {
+    public RakNetInputStream(InputStream in) {
         super(in);
     }
 
     @Override
     public int readVarInt() throws IOException {
-        return VarIntInput.decodeZigZag32(readUnsignedVarInt());
+        return RakNetInput.decodeZigZag32(readUnsignedVarInt());
     }
 
     @Override
@@ -37,7 +37,7 @@ public class VarIntInputStream extends DataInputStream implements VarIntInput {
 
     @Override
     public long readVarLong() throws IOException {
-        return VarIntInput.decodeZigZag64(readUnsignedVarLong());
+        return RakNetInput.decodeZigZag64(readUnsignedVarLong());
     }
 
     @Override

@@ -1,6 +1,10 @@
 package com.magicdroidx.raknetty.handler.session.future;
 
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import com.magicdroidx.raknetty.protocol.raknet.session.FrameSetPacket;
+import io.netty.channel.socket.DatagramPacket;
+
+import java.net.InetSocketAddress;
 
 /**
  * raknetty Project
@@ -8,8 +12,19 @@ import com.magicdroidx.raknetty.protocol.raknet.session.FrameSetPacket;
  */
 public class FrameSetPacketFuture extends PacketFuture<FrameSetPacket> {
 
+    RakNetByteBuf buf;
+
     public FrameSetPacketFuture(FrameSetPacket packet, long sendTime) {
         super(packet, sendTime);
+    }
+
+    public DatagramPacket envelop(InetSocketAddress recipient) {
+        if (buf == null) {
+            buf = RakNetByteBuf.buffer();
+            packet().write(buf);
+        }
+
+        return new DatagramPacket(buf, recipient);
     }
 
     @Override

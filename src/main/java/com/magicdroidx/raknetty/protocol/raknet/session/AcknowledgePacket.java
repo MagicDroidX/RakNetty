@@ -1,5 +1,6 @@
 package com.magicdroidx.raknetty.protocol.raknet.session;
 
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -21,8 +22,12 @@ public final class AcknowledgePacket extends SessionPacket implements FramelessP
         super(id);
     }
 
-    private AcknowledgePacket(ByteBuf buf) {
-        super(buf);
+    public static AcknowledgePacket newACK() {
+        return new AcknowledgePacket(ID_ACK);
+    }
+
+    public static AcknowledgePacket newNACK() {
+        return new AcknowledgePacket(ID_NACK);
     }
 
     public Set<Integer> records() {
@@ -30,17 +35,17 @@ public final class AcknowledgePacket extends SessionPacket implements FramelessP
     }
 
     @Override
-    public void decode() {
-        super.decode();
+    public void read(RakNetByteBuf in) {
+        super.read(in);
         records = new HashSet<>();
-        int count = readUnsignedShort();
+        int count = in.readUnsignedShort();
         for (int i = 0; i < count; i++) {
-            boolean isRange = !readBoolean(); //Notice: 0 for range, 1 for no range
+            boolean isRange = !in.readBoolean(); //Notice: 0 for range, 1 for no range
             if (!isRange) {
-                records.add(readUnsignedMediumLE());
+                records.add(in.readUnsignedMediumLE());
             } else {
-                int startIndex = readUnsignedMediumLE();
-                int endIndex = readUnsignedMediumLE();
+                int startIndex = in.readUnsignedMediumLE();
+                int endIndex = in.readUnsignedMediumLE();
                 for (int index = startIndex; index <= endIndex; index++) {
                     records.add(index);
                 }
@@ -49,8 +54,8 @@ public final class AcknowledgePacket extends SessionPacket implements FramelessP
     }
 
     @Override
-    public void encode() {
-        super.encode();
+    public void write(RakNetByteBuf out) {
+        super.write(out);
         ByteBuf buf = Unpooled.buffer();
 
         int recodeCnt = 0;
@@ -79,8 +84,8 @@ public final class AcknowledgePacket extends SessionPacket implements FramelessP
             }
         }
 
-        writeShort(recodeCnt);
-        writeBytes(buf);
+        out.writeShort(recodeCnt);
+        out.writeBytes(buf);
     }
 
     public boolean isACK() {
@@ -89,23 +94,5 @@ public final class AcknowledgePacket extends SessionPacket implements FramelessP
 
     public boolean isNACK() {
         return id() == ID_NACK;
-    }
-
-    public static AcknowledgePacket newACK() {
-        return new AcknowledgePacket(ID_ACK);
-    }
-
-    public static AcknowledgePacket newNACK() {
-        return new AcknowledgePacket(ID_NACK);
-    }
-
-    public static AcknowledgePacket from(ByteBuf buf) {
-        switch (buf.getByte(0) & 0xff) {
-            case ID_ACK:
-            case ID_NACK:
-                return new AcknowledgePacket(buf);
-            default:
-                return null;
-        }
     }
 }

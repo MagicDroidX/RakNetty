@@ -1,6 +1,5 @@
 package com.magicdroidx.raknetty;
 
-import com.google.common.io.BaseEncoding;
 import com.magicdroidx.raknetty.handler.UnconnectedPingHandler;
 import com.magicdroidx.raknetty.handler.codec.RakNetPacketDecoder;
 import com.magicdroidx.raknetty.handler.codec.RakNetPacketEncoder;
@@ -8,6 +7,7 @@ import com.magicdroidx.raknetty.handler.session.SessionManager;
 import com.magicdroidx.raknetty.listener.ServerListener;
 import com.magicdroidx.raknetty.protocol.raknet.AddressedRakNetPacket;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
+import com.magicdroidx.raknetty.util.NetworkInterfaceUtil;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -15,8 +15,7 @@ import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
+import java.net.InetSocketAddress;
 import java.util.UUID;
 
 /**
@@ -25,14 +24,22 @@ import java.util.UUID;
  */
 public class RakNetServer {
 
+    int port = 19132;
+
     private final UUID uuid = UUID.randomUUID();
 
-    private int MTU;
+    private int mtu;
+
+    private InetSocketAddress[] systemAddresses;
 
     private ServerListener listener;
 
     public RakNetServer() throws IOException {
-        MTU = NetworkInterface.getByInetAddress(InetAddress.getLocalHost()).getMTU();
+        //Get mtu
+        mtu = NetworkInterfaceUtil.getMTU();
+
+        //Get System Addresses
+        systemAddresses = NetworkInterfaceUtil.getSystemAddresses(port);
     }
 
     public void run() throws InterruptedException {
@@ -54,9 +61,10 @@ public class RakNetServer {
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     AddressedRakNetPacket packet = (AddressedRakNetPacket) msg;
                                     RakNetPacket buf = (RakNetPacket) packet.content();
-                                    byte[] bytes = new byte[buf.writerIndex()];
+                                    System.out.println("Unhandled: " + buf);
+                                    /*byte[] bytes = new byte[buf.writerIndex()];
                                     buf.getBytes(0, bytes);
-                                    System.out.println("Unhandled: " + BaseEncoding.base16().withSeparator(" ", 2).encode(bytes));
+                                    System.out.println("Unhandled: " + BaseEncoding.base16().withSeparator(" ", 2).encode(bytes));*/
                                 }
 
                                 @Override
@@ -69,7 +77,7 @@ public class RakNetServer {
                     });
 
             ChannelFuture future = bootstrap
-                    .bind(19132)
+                    .bind(port)
                     .sync();
             future.channel().closeFuture().await();
         } finally {
@@ -90,8 +98,11 @@ public class RakNetServer {
         return uuid;
     }
 
-    public int getMTU() {
-        return MTU;
+    public int mtu() {
+        return mtu;
     }
 
+    public InetSocketAddress[] systemAddresses() {
+        return systemAddresses;
+    }
 }

@@ -25,6 +25,14 @@ public enum Reliability {
     RELIABLE_ORDERED_ACK
             (7, true, true, false, true);
 
+    private final static HashMap<Integer, Reliability> lookUpMap = new HashMap<>();
+
+    static {
+        for (Reliability reliability : values()) {
+            lookUpMap.put(reliability.id(), reliability);
+        }
+    }
+
     int id;
     boolean reliable;
     boolean ordered;
@@ -37,6 +45,11 @@ public enum Reliability {
         this.ordered = ordered;
         this.sequenced = sequenced;
         this.withAckReceipt = withAckReceipt;
+    }
+
+    public static Reliability getById(int id) {
+        id &= 0b111;
+        return lookUpMap.get(id);
     }
 
     public int length() {
@@ -75,18 +88,5 @@ public enum Reliability {
 
     public boolean withAckReceipt() {
         return withAckReceipt;
-    }
-
-    private final static HashMap<Integer, Reliability> lookUpMap = new HashMap<>();
-
-    static {
-        for (Reliability reliability : values()) {
-            lookUpMap.put(reliability.id(), reliability);
-        }
-    }
-
-    public static Reliability getById(int id) {
-        id &= 0b111;
-        return lookUpMap.get(id);
     }
 }

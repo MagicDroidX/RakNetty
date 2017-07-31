@@ -1,9 +1,7 @@
 package com.magicdroidx.raknetty.handler.codec;
 
-import com.google.common.io.BaseEncoding;
+import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
-import com.magicdroidx.raknetty.protocol.raknet.session.SessionPacket;
-import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
@@ -22,14 +20,9 @@ public class RakNetPacketEncoder extends MessageToMessageEncoder<AddressedEnvelo
     protected final void encode(ChannelHandlerContext ctx, AddressedEnvelope<RakNetPacket, InetSocketAddress> msg, List<Object> out) throws Exception {
         assert out.isEmpty();
         RakNetPacket packet = msg.content();
-        packet.encode();
-        /*if (packet instanceof SessionPacket) {
-            ByteBuf buf = packet.copy().retain();
-            byte[] bytes = new byte[buf.writerIndex()];
-            buf.getBytes(0, bytes);
-            System.out.println("Out: " + BaseEncoding.base16().withSeparator(" ", 2).encode(bytes));
-        }*/
-        out.add(new DatagramPacket(packet.retain(), msg.recipient(), msg.sender()));
+        RakNetByteBuf data = RakNetByteBuf.buffer();
+        packet.write(data);
+        out.add(new DatagramPacket(data, msg.recipient(), msg.sender()));
     }
 
 }
