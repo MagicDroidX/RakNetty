@@ -37,7 +37,6 @@ public final class ConnectionRequestAcceptedPacket extends SessionPacket {
 
     @Override
     public void write(RakNetByteBuf out) {
-        System.out.println(toString());
         super.write(out);
         out.writeAddress(clientAddress);
         int systemIndex = addresses.length;

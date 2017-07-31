@@ -24,10 +24,8 @@ import java.util.UUID;
  */
 public class RakNetServer {
 
-    int port = 19132;
-
     private final UUID uuid = UUID.randomUUID();
-
+    int port = 19132;
     private int mtu;
 
     private InetSocketAddress[] systemAddresses;

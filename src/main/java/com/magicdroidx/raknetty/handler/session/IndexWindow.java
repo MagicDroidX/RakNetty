@@ -9,7 +9,7 @@ import java.util.Set;
  */
 public class IndexWindow {
 
-    private static final int MAX_SIZE = 512;
+    private static final int MAX_SIZE = 128;
     private int start = -1;
     private int end = -1;
     private Set<Integer> opened = new HashSet<>();
@@ -29,8 +29,12 @@ public class IndexWindow {
     }
 
     public void update() {
-        while (!opened.isEmpty() && opened.contains(++start)) {
-            opened.remove(start);
+        while (!opened.isEmpty()) {
+            if (opened.contains(start + 1)) { //Find next closable window
+                opened.remove(++start);
+            } else {
+                break;
+            }
         }
     }
 

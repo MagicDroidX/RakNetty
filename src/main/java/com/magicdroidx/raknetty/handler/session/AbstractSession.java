@@ -14,6 +14,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.ScheduledFuture;
 
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -41,14 +42,10 @@ public abstract class AbstractSession implements Session {
     private FragmentAggregator aggregator = new FragmentAggregator(this);
 
     //Inbound indexes
-    private int inboundIndexFrameSet;
-    private int inboundIndexReliable;
-    private int inboundIndexOrdered;
     private int inboundIndexSequenced = -1;
-    private int inboundFragmentID;
     private IndexWindow frameSetWindow = new IndexWindow();
     private IndexWindow reliableWindow = new IndexWindow();
-
+    private HashMap<Integer, OrderChannel> orderChannels = new HashMap<>();
 
     //Outbound indexes
     private int outboundIndexFrameSet;
@@ -66,6 +63,10 @@ public abstract class AbstractSession implements Session {
         this.address = address;
         this.ctx = ctx;
         tickTask = ctx.executor().scheduleAtFixedRate(this::update0, 10, 10, TimeUnit.MILLISECONDS);
+
+        for (int i = 0; i < 32; i++) {
+            orderChannels.put(i, new OrderChannel(this));
+        }
     }
 
     private void update0() {
@@ -247,27 +248,40 @@ public abstract class AbstractSession implements Session {
             FrameSetPacket frameSet = (FrameSetPacket) packet;
 
             if (!frameSetWindow.openWindow(frameSet.index)) {
+                //Duplicate frame set
                 return;
             }
 
             for (FramePacket frame : frameSet.frames()) {
-                //TODO: ??? necessary?
-                /*if (frame.reliability.isReliable()) {
-                    reliableWindow.openWindow(frame.indexReliable);
-                }*/
+                if (frame.reliability.isReliable()) {
+                    if (!reliableWindow.openWindow(frame.indexReliable)) {
+                        //Duplicate frame
+                        continue;
+                    }
+                }
 
                 if (frame.fragmented) {
                     aggregator.offer(frame);
-                } else {
-                    if (frame.reliability.isSequenced()) {
-                        if (frame.indexSequenced > inboundIndexSequenced) {
-                            inboundIndexSequenced = frame.indexSequenced;
-                        }
-                    }
-                    //TODO: Ordered
-
-                    handle(SessionPacket.from(frame.body));
+                    continue;
                 }
+
+                if (frame.reliability.isSequenced()) {
+                    if (frame.indexSequenced > inboundIndexSequenced) {
+                        inboundIndexSequenced = frame.indexSequenced;
+                    } else {
+                        continue;
+                    }
+                } else if (frame.reliability.isOrdered()) {
+                    OrderChannel channel = orderChannels.get(frame.orderChannel);
+                    if (channel == null) {
+                        continue;
+                    }
+
+                    channel.provide(frame);
+                    continue;
+                }
+
+                handle(SessionPacket.from(frame.body));
             }
 
             return;

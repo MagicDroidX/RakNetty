@@ -4,7 +4,6 @@ import com.google.common.base.Charsets;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -141,7 +140,7 @@ public class RakNetByteBuf extends WrappedBuf {
         writeUnsignedVarLong(encodeZigZag64(value));
     }
 
-    public void writeUnsignedVarLong(long value)  {
+    public void writeUnsignedVarLong(long value) {
         while (true) {
             if ((value & ~0x7FL) == 0) {
                 writeByte((int) value);
