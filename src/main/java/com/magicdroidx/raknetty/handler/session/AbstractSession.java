@@ -193,7 +193,7 @@ public abstract class AbstractSession implements Session {
     @Override
     public void close(String reason) {
         sendPacket(new DisconnectionNotificationPacket(), Reliability.UNRELIABLE, true);
-        sessionManager.close(this, reason);
+        sessionManager.close0(this, reason);
         tickTask.cancel(true);
 
         if (this.listener != null) {
@@ -214,12 +214,10 @@ public abstract class AbstractSession implements Session {
 
                     if (acknowledgePacket.records().contains(index)) {
                         if (acknowledgePacket.isACK()) {
-                            System.out.println("In: ACKed " + index);
                             iterator.remove();
                         }
 
                         if (acknowledgePacket.isNACK()) {
-                            System.out.println("In: NACKed " + index);
                             future.setSendTime(System.currentTimeMillis());
                         }
                     }
@@ -239,7 +237,6 @@ public abstract class AbstractSession implements Session {
         if (packet instanceof ConnectedPongPacket) {
             if (((ConnectedPongPacket) packet).timestamp == lastPingTime) {
                 latency = (int) (System.currentTimeMillis() - lastPingTime);
-                System.out.println("Latency: " + latency + "ms");
             }
             return;
         }

@@ -62,7 +62,7 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
         }
     }
 
-    void close(Session session, String reason) {
+    void close0(Session session, String reason) {
         if (session == null) {
             return;
         }
@@ -70,6 +70,12 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
         sessions.remove(session.address());
         if (server().listener() != null) {
             server().listener().onSessionRemoved(session);
+        }
+    }
+
+    public void closeAll() {
+        for (InetSocketAddress address : sessions.keySet()) {
+            close(address, "General Reason");
         }
     }
 

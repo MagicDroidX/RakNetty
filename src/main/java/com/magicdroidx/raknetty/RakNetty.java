@@ -21,38 +21,41 @@ public class RakNetty {
     public static final int PROTOCOL_VERSION = 8;
 
     public static void main(String[] args) throws Exception {
-        RakNetServer server = new RakNetServer();
-        server.setListener(new ServerListener() {
-            @Override
-            public void onSessionCreated(Session session) {
-                session.setListener(new SessionListenerAdapter() {
+
+        RakNetServer server = RakNetServer.bootstrap()
+                .withListener(new ServerListener() {
                     @Override
-                    public void registered(Session session) {
-                        System.out.println("New session created: " + session.address());
+                    public void onSessionCreated(Session session) {
+                        session.setListener(new SessionListenerAdapter() {
+                            @Override
+                            public void registered(Session session) {
+                                System.out.println(session.address() + " connecting.");
+                            }
+
+                            @Override
+                            public void connected(Session session) {
+                                System.out.println(session.address() + " connected.");
+                            }
+
+                            @Override
+                            public void packetReceived(Session session, GamePacket packet) {
+                                System.out.println("Received a game packet: \r\n" + packet);
+                            }
+
+                            @Override
+                            public void disconnected(Session session) {
+                                System.out.println(session.address() + " disconnected.");
+                            }
+                        });
                     }
 
                     @Override
-                    public void connected(Session session) {
-                        System.out.println("Connection with " + session.address() + " has been established.");
+                    public void onSessionRemoved(Session session) {
+                        System.out.println("Session closed: " + session.address());
                     }
+                })
+                .withPort(11111)
+                .start();
 
-                    @Override
-                    public void packetReceived(Session session, GamePacket packet) {
-                        System.out.println("Received a game packet: " + packet);
-                    }
-
-                    @Override
-                    public void disconnected(Session session) {
-                        System.out.println(session.address() + "disconnected.");
-                    }
-                });
-            }
-
-            @Override
-            public void onSessionRemoved(Session session) {
-                System.out.println("Session closed: " + session.address());
-            }
-        });
-        server.run();
     }
 }
