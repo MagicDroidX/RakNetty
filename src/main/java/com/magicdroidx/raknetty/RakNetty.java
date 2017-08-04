@@ -50,12 +50,13 @@ public class RakNetty {
                     }
 
                     @Override
-                    public void onSessionRemoved(Session session) {
-                        System.out.println("Session closed: " + session.address());
+                    public void onSessionRemoved(Session session, String reason) {
+                        System.out.println("Session closed: " + session.address() + " due to " + reason);
                     }
                 })
                 .withPort(11111)
                 .start();
 
+        //server.stop();
     }
 }

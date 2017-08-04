@@ -69,7 +69,7 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
 
         sessions.remove(session.address());
         if (server().listener() != null) {
-            server().listener().onSessionRemoved(session);
+            server().listener().onSessionRemoved(session, reason);
         }
     }
 

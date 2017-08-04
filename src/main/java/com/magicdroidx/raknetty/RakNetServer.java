@@ -32,6 +32,8 @@ public class RakNetServer {
     private InetSocketAddress[] systemAddresses;
     private Channel channel;
     private SessionManager sessionManager;
+    private NioEventLoopGroup bossGroup;
+    private NioEventLoopGroup workerGroup;
 
     private RakNetServer() throws IOException {
         //Get mtu
@@ -41,6 +43,8 @@ public class RakNetServer {
         systemAddresses = NetworkInterfaceUtil.getSystemAddresses(port);
 
         sessionManager = new SessionManager(RakNetServer.this);
+        bossGroup = new NioEventLoopGroup();
+        workerGroup = new NioEventLoopGroup();
     }
 
     public static ServerBootstrap bootstrap() {
@@ -48,53 +52,44 @@ public class RakNetServer {
     }
 
     void start() throws InterruptedException {
-        NioEventLoopGroup boss = new NioEventLoopGroup();
-        NioEventLoopGroup worker = new NioEventLoopGroup();
-        try {
-            Bootstrap bootstrap = new Bootstrap();
-            bootstrap.group(boss)
-                    .channel(NioDatagramChannel.class)
-                    .handler(new ChannelInitializer<DatagramChannel>() {
-                        protected void initChannel(DatagramChannel ch) throws Exception {
-                            ChannelPipeline pipeline = ch.pipeline();
-                            pipeline.addLast("RakNetDecoder", new RakNetPacketDecoder());
-                            pipeline.addLast("RakNetEncoder", new RakNetPacketEncoder());
-                            pipeline.addLast(worker, "UnconnectedPingHandler", new UnconnectedPingHandler(RakNetServer.this));
-                            pipeline.addLast(worker, "SessionManager", sessionManager);
-                            pipeline.addLast("Unhandled", new ChannelInboundHandlerAdapter() {
-                                @Override
-                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                    AddressedRakNetPacket packet = (AddressedRakNetPacket) msg;
-                                    RakNetPacket buf = (RakNetPacket) packet.content();
-                                    System.out.println("Unhandled: " + buf);
-                                    /*byte[] bytes = new byte[buf.writerIndex()];
-                                    buf.getBytes(0, bytes);
-                                    System.out.println("Unhandled: " + BaseEncoding.base16().withSeparator(" ", 2).encode(bytes));*/
-                                }
+        Bootstrap bootstrap = new Bootstrap();
+        bootstrap.group(bossGroup)
+                .channel(NioDatagramChannel.class)
+                .handler(new ChannelInitializer<DatagramChannel>() {
+                    protected void initChannel(DatagramChannel ch) throws Exception {
+                        ChannelPipeline pipeline = ch.pipeline();
+                        pipeline.addLast("RakNetDecoder", new RakNetPacketDecoder());
+                        pipeline.addLast("RakNetEncoder", new RakNetPacketEncoder());
+                        pipeline.addLast(workerGroup, "UnconnectedPingHandler", new UnconnectedPingHandler(RakNetServer.this));
+                        pipeline.addLast(workerGroup, "SessionManager", sessionManager);
+                        pipeline.addLast("Unhandled", new ChannelInboundHandlerAdapter() {
+                            @Override
+                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                AddressedRakNetPacket packet = (AddressedRakNetPacket) msg;
+                                RakNetPacket buf = (RakNetPacket) packet.content();
+                                System.out.println("Unhandled: " + buf);
+                            }
 
-                                @Override
-                                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                                    super.exceptionCaught(ctx, cause);
-                                    //Block
-                                }
-                            });
-                        }
-                    });
+                            @Override
+                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                                super.exceptionCaught(ctx, cause);
+                                //Block
+                            }
+                        });
+                    }
+                });
 
-            ChannelFuture future = bootstrap
-                    .bind(port)
-                    .sync();
-            channel = future.channel();
-            channel.closeFuture().await();
-        } finally {
-            boss.shutdownGracefully();
-            worker.shutdownGracefully();
-        }
+        ChannelFuture future = bootstrap
+                .bind(port)
+                .sync();
+        channel = future.channel();
     }
 
     public void stop() {
         sessionManager.closeAll();
-        channel.close();
+        channel.close().awaitUninterruptibly();
+        workerGroup.shutdownGracefully();
+        bossGroup.shutdownGracefully();
     }
 
     public ServerListener listener() {
