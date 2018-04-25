@@ -11,6 +11,7 @@ import io.netty.buffer.Unpooled;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.util.zip.DeflaterOutputStream;
+import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
 /**
@@ -30,7 +31,7 @@ public class GameWrapperPacket extends SessionPacket {
     public void read(RakNetByteBuf in) {
         super.read(in);
 
-        RakNetInputStream is = new RakNetInputStream(new InflaterInputStream(new BufferedInputStream(new ByteBufInputStream(in))));
+        RakNetInputStream is = new RakNetInputStream(new InflaterInputStream(new BufferedInputStream(new ByteBufInputStream(in)), new Inflater(), 64 * 1024));//64KB
 
         try {
             int bodySize = is.readUnsignedVarInt();
