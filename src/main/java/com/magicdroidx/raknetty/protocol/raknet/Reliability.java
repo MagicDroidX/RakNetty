@@ -89,4 +89,15 @@ public enum Reliability {
     public boolean withAckReceipt() {
         return withAckReceipt;
     }
+
+    @Override
+    public String toString() {
+        return "Reliability{" +
+                "id=" + id +
+                ", reliable=" + reliable +
+                ", ordered=" + ordered +
+                ", sequenced=" + sequenced +
+                ", withAckReceipt=" + withAckReceipt +
+                '}';
+    }
 }

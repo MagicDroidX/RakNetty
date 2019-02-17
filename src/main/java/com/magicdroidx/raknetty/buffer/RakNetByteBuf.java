@@ -117,6 +117,10 @@ public class RakNetByteBuf extends WrappedBuf {
     }
 
     public CharSequence readString() {
+        return readCharSequence(readUnsignedVarInt(), Charsets.UTF_8);
+    }
+
+    public CharSequence readFixedString() {
         return readCharSequence(readUnsignedShort(), Charsets.UTF_8);
     }
 
@@ -172,9 +176,14 @@ public class RakNetByteBuf extends WrappedBuf {
     }
 
     public ByteBuf writeString(CharSequence sequence) {
+        writeUnsignedVarInt(sequence.length());
+        writeCharSequence(sequence, Charsets.UTF_8);
+        return this;
+    }
+
+    public ByteBuf writeFixedString(CharSequence sequence) {
         writeShort(sequence.length());
         writeCharSequence(sequence, Charsets.UTF_8);
-
         return this;
     }
 }

@@ -25,7 +25,7 @@ public class UnconnectedPongPacket extends RakNetPacket {
         pingId = in.readLong();
         serverGUID = in.readLong();
         in.skipBytes(RakNetty.OFFLINE_MESSAGE_ID.length);
-        serverName = in.readString();
+        serverName = in.readFixedString();
     }
 
     @Override
@@ -34,7 +34,7 @@ public class UnconnectedPongPacket extends RakNetPacket {
         out.writeLong(pingId);
         out.writeLong(serverGUID);
         out.writeBytes(RakNetty.OFFLINE_MESSAGE_ID);
-        out.writeString(serverName);
+        out.writeFixedString(serverName);
     }
 
     @Override

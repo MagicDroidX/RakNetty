@@ -1,11 +1,12 @@
 package com.magicdroidx.raknetty.handler.session;
 
 import com.magicdroidx.raknetty.RakNetServer;
-import com.magicdroidx.raknetty.handler.RakNetPacketHandler;
+import com.magicdroidx.raknetty.handler.RakNetInboundHandler;
 import com.magicdroidx.raknetty.protocol.raknet.AddressedRakNetPacket;
 import com.magicdroidx.raknetty.protocol.raknet.session.OpenConnectionRequestPacket1;
 import com.magicdroidx.raknetty.protocol.raknet.session.SessionPacket;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.nio.NioEventLoopGroup;
 
 import java.net.InetSocketAddress;
 import java.util.Map;
@@ -15,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * raknetty Project
  * Author: MagicDroidX
  */
-public class SessionManager extends RakNetPacketHandler<SessionPacket> {
+public class ServerSessionHandler extends RakNetInboundHandler<SessionPacket> {
 
     private RakNetServer server;
 
@@ -23,13 +24,19 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
 
     private ChannelHandlerContext ctx;
 
-    public SessionManager(RakNetServer server) {
+    private NioEventLoopGroup tickGroup = new NioEventLoopGroup();
+
+    public ServerSessionHandler(RakNetServer server) {
         super(SessionPacket.class);
         this.server = server;
     }
 
     public RakNetServer server() {
         return server;
+    }
+
+    public NioEventLoopGroup tickGroup() {
+        return tickGroup;
     }
 
     public boolean contains(InetSocketAddress address) {
@@ -74,6 +81,7 @@ public class SessionManager extends RakNetPacketHandler<SessionPacket> {
     }
 
     public void closeAll() {
+        tickGroup.shutdownGracefully();
         for (InetSocketAddress address : sessions.keySet()) {
             close(address, "General Reason");
         }

@@ -6,6 +6,7 @@ import com.magicdroidx.raknetty.handler.session.future.FramePacketFuture;
 import com.magicdroidx.raknetty.handler.session.future.FrameSetPacketFuture;
 import com.magicdroidx.raknetty.handler.session.future.PacketFuture;
 import com.magicdroidx.raknetty.listener.SessionListener;
+import com.magicdroidx.raknetty.protocol.game.GamePacket;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
 import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 import com.magicdroidx.raknetty.protocol.raknet.session.*;
@@ -16,6 +17,8 @@ import io.netty.util.concurrent.ScheduledFuture;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.PriorityBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
@@ -31,7 +34,7 @@ public abstract class AbstractSession implements Session {
     long GUID;
 
     SessionListener listener;
-    SessionManager sessionManager;
+    ServerSessionHandler sessionHandler;
     ChannelHandlerContext ctx;
     private ScheduledFuture tickTask;
 
@@ -53,16 +56,17 @@ public abstract class AbstractSession implements Session {
     private int outboundIndexOrdered;
     private int outboundIndexSequenced;
     private int outboundFragmentID;
+    private Queue<GamePacket> sendQueue = new ConcurrentLinkedQueue<>();
 
     //Latency
     private long lastPingTime = System.currentTimeMillis();
     private int latency = 200;
 
-    AbstractSession(SessionManager sessionManager, InetSocketAddress address, ChannelHandlerContext ctx) {
-        this.sessionManager = sessionManager;
+    AbstractSession(ServerSessionHandler sessionHandler, InetSocketAddress address, ChannelHandlerContext ctx) {
+        this.sessionHandler = sessionHandler;
         this.address = address;
         this.ctx = ctx;
-        tickTask = ctx.executor().scheduleAtFixedRate(this::update0, 10, 10, TimeUnit.MILLISECONDS);
+        tickTask = sessionHandler.tickGroup().scheduleAtFixedRate(this::update0, 10, 10, TimeUnit.MILLISECONDS);
 
         for (int i = 0; i < 32; i++) {
             orderChannels.put(i, new OrderChannel(this));
@@ -70,6 +74,7 @@ public abstract class AbstractSession implements Session {
     }
 
     private void update0() {
+        //System.out.println("Ticking on thread: " + Thread.currentThread());
         if (state() == SessionState.CLOSED) {
             tickTask.cancel(true);
             return;
@@ -91,8 +96,18 @@ public abstract class AbstractSession implements Session {
 
         idle = true;
 
-        PacketFuture packetFuture;
+        //Dealing with Game Packet Queue
+        if (!sendQueue.isEmpty()) {
+            GamePacket p;
+            GameWrapperPacket wrapperPacket = new GameWrapperPacket();
+            while ((p = sendQueue.poll()) != null) {
+                wrapperPacket.packets.add(p);
+            }
+            sendPacket(wrapperPacket, Reliability.RELIABLE_ORDERED_ACK);
+        }
 
+        //Dealing with Resend Queue
+        PacketFuture packetFuture;
         FrameSetPacket frameSet = null;
 
         while ((packetFuture = resendQueue.poll()) != null) {
@@ -182,7 +197,7 @@ public abstract class AbstractSession implements Session {
     }
 
     protected RakNetServer server() {
-        return sessionManager.server();
+        return sessionHandler.server();
     }
 
     @Override
@@ -193,7 +208,7 @@ public abstract class AbstractSession implements Session {
     @Override
     public void close(String reason) {
         sendPacket(new DisconnectionNotificationPacket(), Reliability.UNRELIABLE, true);
-        sessionManager.close0(this, reason);
+        sessionHandler.close0(this, reason);
         tickTask.cancel(true);
 
         if (this.listener != null) {
@@ -241,6 +256,11 @@ public abstract class AbstractSession implements Session {
             return;
         }
 
+        if (packet instanceof DisconnectionNotificationPacket) {
+            this.close("Client Disconnected");
+            return;
+        }
+
         if (packet instanceof FrameSetPacket) {
             FrameSetPacket frameSet = (FrameSetPacket) packet;
 
@@ -258,8 +278,12 @@ public abstract class AbstractSession implements Session {
                 }
 
                 if (frame.fragmented) {
-                    aggregator.offer(frame);
-                    continue;
+                    FramePacket result = aggregator.offer(frame);
+                    if (result != null) {
+                        frame = result;
+                    } else {
+                        continue;
+                    }
                 }
 
                 if (frame.reliability.isSequenced()) {
@@ -275,6 +299,8 @@ public abstract class AbstractSession implements Session {
                     }
 
                     channel.provide(frame);
+                    System.out.println(channel);
+                    System.out.println(frame.indexOrdered);
                     continue;
                 }
 
@@ -287,7 +313,9 @@ public abstract class AbstractSession implements Session {
         if (packet instanceof GameWrapperPacket) {
 
             if (this.listener != null) {
-                this.listener.packetReceived(this, ((GameWrapperPacket) packet).body);
+                for (GamePacket p : ((GameWrapperPacket) packet).packets) {
+                    this.listener.packetReceived(this, p);
+                }
             }
 
             this.lastUpdateTime = System.currentTimeMillis();
@@ -388,6 +416,11 @@ public abstract class AbstractSession implements Session {
     }
 
     @Override
+    public void sendPacket(GamePacket packet) {
+        sendQueue.add(packet);
+    }
+
+    @Override
     public int getTimeOut() {
         return state() == SessionState.CONNECTED ? 10000 : 3000;
     }
@@ -402,5 +435,34 @@ public abstract class AbstractSession implements Session {
     @Override
     public SessionListener listener() {
         return this.listener;
+    }
+
+    @Override
+    public String toString() {
+        return "AbstractSession{" +
+                "MTU=" + MTU +
+                ", address=" + address +
+                ", GUID=" + GUID +
+                ", listener=" + listener +
+                ", sessionHandler=" + sessionHandler +
+                ", ctx=" + ctx +
+                ", tickTask=" + tickTask +
+                ", idle=" + idle +
+                ", lastUpdateTime=" + lastUpdateTime +
+                ", resendQueue=" + resendQueue +
+                ", aggregator=" + aggregator +
+                ", inboundIndexSequenced=" + inboundIndexSequenced +
+                ", frameSetWindow=" + frameSetWindow +
+                ", reliableWindow=" + reliableWindow +
+                ", orderChannels=" + orderChannels +
+                ", outboundIndexFrameSet=" + outboundIndexFrameSet +
+                ", outboundIndexReliable=" + outboundIndexReliable +
+                ", outboundIndexOrdered=" + outboundIndexOrdered +
+                ", outboundIndexSequenced=" + outboundIndexSequenced +
+                ", outboundFragmentID=" + outboundFragmentID +
+                ", sendQueue=" + sendQueue +
+                ", lastPingTime=" + lastPingTime +
+                ", latency=" + latency +
+                '}';
     }
 }

@@ -13,11 +13,11 @@ import java.net.InetSocketAddress;
  * RakNetty Project
  * Author: MagicDroidX
  */
-public class ServerSession extends AbstractSession {
+public class ClientSession extends AbstractSession {
 
     private SessionState state = SessionState.UNCONNECTED;
 
-    public ServerSession(ServerSessionHandler sessionHandler, InetSocketAddress address, ChannelHandlerContext ctx) {
+    public ClientSession(ServerSessionHandler sessionHandler, InetSocketAddress address, ChannelHandlerContext ctx) {
         super(sessionHandler, address, ctx);
     }
 
@@ -126,6 +126,5 @@ public class ServerSession extends AbstractSession {
         ctx.fireChannelRead(conn.envelop(address));
         return false;
     }
-
 
 }

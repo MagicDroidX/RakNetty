@@ -4,7 +4,7 @@ import com.magicdroidx.raknetty.bootstrap.RakNetServerBootstrap;
 import com.magicdroidx.raknetty.handler.UnconnectedPingHandler;
 import com.magicdroidx.raknetty.handler.codec.RakNetPacketDecoder;
 import com.magicdroidx.raknetty.handler.codec.RakNetPacketEncoder;
-import com.magicdroidx.raknetty.handler.session.SessionManager;
+import com.magicdroidx.raknetty.handler.session.ServerSessionHandler;
 import com.magicdroidx.raknetty.listener.ServerListener;
 import com.magicdroidx.raknetty.protocol.raknet.AddressedRakNetPacket;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
@@ -26,13 +26,21 @@ import java.util.UUID;
 public class RakNetServer {
 
     private final UUID uuid = UUID.randomUUID();
+
     ServerListener listener;
+
     int port = 19132;
+
     private int mtu;
+
     private InetSocketAddress[] systemAddresses;
+
     private Channel channel;
-    private SessionManager sessionManager;
+
+    private ServerSessionHandler sessionHandler;
+
     private NioEventLoopGroup bossGroup;
+
     private NioEventLoopGroup workerGroup;
 
     private RakNetServer() throws IOException {
@@ -42,7 +50,7 @@ public class RakNetServer {
         //Get System Addresses
         systemAddresses = NetworkInterfaceUtil.getSystemAddresses(port);
 
-        sessionManager = new SessionManager(RakNetServer.this);
+        sessionHandler = new ServerSessionHandler(RakNetServer.this);
         bossGroup = new NioEventLoopGroup();
         workerGroup = new NioEventLoopGroup();
     }
@@ -55,19 +63,20 @@ public class RakNetServer {
         Bootstrap bootstrap = new Bootstrap();
         bootstrap.group(bossGroup)
                 .channel(NioDatagramChannel.class)
+                .option(ChannelOption.SO_REUSEADDR, true)
                 .handler(new ChannelInitializer<DatagramChannel>() {
                     protected void initChannel(DatagramChannel ch) throws Exception {
                         ChannelPipeline pipeline = ch.pipeline();
                         pipeline.addLast("RakNetDecoder", new RakNetPacketDecoder());
                         pipeline.addLast("RakNetEncoder", new RakNetPacketEncoder());
                         pipeline.addLast(workerGroup, "UnconnectedPingHandler", new UnconnectedPingHandler(RakNetServer.this));
-                        pipeline.addLast(workerGroup, "SessionManager", sessionManager);
+                        pipeline.addLast(workerGroup, "ServerSessionHandler", sessionHandler);
                         pipeline.addLast("Unhandled", new ChannelInboundHandlerAdapter() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                 AddressedRakNetPacket packet = (AddressedRakNetPacket) msg;
                                 RakNetPacket buf = (RakNetPacket) packet.content();
-                                System.out.println("Unhandled: " + buf);
+                                System.out.println("Unhandled Inbound Packet: " + buf);
                             }
 
                             @Override
@@ -86,7 +95,7 @@ public class RakNetServer {
     }
 
     public void stop() {
-        sessionManager.closeAll();
+        sessionHandler.closeAll();
         channel.close().awaitUninterruptibly();
         workerGroup.shutdownGracefully();
         bossGroup.shutdownGracefully();

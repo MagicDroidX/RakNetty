@@ -54,4 +54,12 @@ public final class FrameSetPacket extends SessionPacket {
 
         return length;
     }
+
+    @Override
+    public String toString() {
+        return "FrameSetPacket{" +
+                "index=" + index +
+                ", frames=" + frames +
+                '}';
+    }
 }

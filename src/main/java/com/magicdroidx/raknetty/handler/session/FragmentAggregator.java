@@ -2,7 +2,6 @@ package com.magicdroidx.raknetty.handler.session;
 
 import com.google.common.base.Preconditions;
 import com.magicdroidx.raknetty.protocol.raknet.session.FramePacket;
-import com.magicdroidx.raknetty.protocol.raknet.session.SessionPacket;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
@@ -22,7 +21,12 @@ public class FragmentAggregator {
         this.session = session;
     }
 
-    public void offer(FramePacket frame) {
+
+    /**
+     * @param frame
+     * @return return a FramePacket if all fragments have arrived, otherwise return null.
+     */
+    public FramePacket offer(FramePacket frame) {
         Preconditions.checkState(frame.fragmented, "Only accept fragmented frame packet");
 
         int fragmentIndex = frame.fragmentIndex;
@@ -41,15 +45,18 @@ public class FragmentAggregator {
         //Check if all fragments arrived
         for (ByteBuf buf : fragments) {
             if (buf == null) {
-                return;
+                return null;
             }
         }
 
         fragmentPool.remove(fragmentID);
 
+        //Put all the fragments back into the last frame packet provided in order to go through the order channel.
         ByteBuf fullBuf = Unpooled.copiedBuffer(fragments);
-
-        session.handle(SessionPacket.from(fullBuf));
+        frame.fragmented = false;
+        frame.body = fullBuf;
+        //session.handle(SessionPacket.from(fullBuf));
+        return frame;
     }
 
 }

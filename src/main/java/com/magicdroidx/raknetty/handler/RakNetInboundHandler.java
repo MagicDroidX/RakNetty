@@ -9,11 +9,11 @@ import io.netty.channel.SimpleChannelInboundHandler;
  * raknetty Project
  * Author: MagicDroidX
  */
-public abstract class RakNetPacketHandler<I extends RakNetPacket> extends SimpleChannelInboundHandler<AddressedRakNetPacket<I>> {
+public abstract class RakNetInboundHandler<I extends RakNetPacket> extends SimpleChannelInboundHandler<AddressedRakNetPacket<I>> {
 
     private Class<I> packetClass;
 
-    public RakNetPacketHandler(Class<I> packetClass) {
+    public RakNetInboundHandler(Class<I> packetClass) {
         this.packetClass = packetClass;
     }
 
@@ -29,6 +29,7 @@ public abstract class RakNetPacketHandler<I extends RakNetPacket> extends Simple
     @Override
     protected final void channelRead0(ChannelHandlerContext ctx, AddressedRakNetPacket<I> packet) throws Exception {
         packetReceived(ctx, packet);
+        packet.release();
     }
 
     protected abstract void packetReceived(ChannelHandlerContext ctx, AddressedRakNetPacket<I> p);

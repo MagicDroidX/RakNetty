@@ -42,9 +42,13 @@ public class SessionPacket extends RakNetPacket {
             case NewIncomingConnectionPacket.ID:
                 packet = new NewIncomingConnectionPacket();
                 break;
+            case DisconnectionNotificationPacket.ID:
+                packet = new DisconnectionNotificationPacket();
+                break;
             case GameWrapperPacket.ID:
                 packet = new GameWrapperPacket();
                 break;
+
             default:
                 return new SessionPacket(id);
         }

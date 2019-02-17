@@ -10,4 +10,9 @@ public final class DisconnectionNotificationPacket extends SessionPacket {
     public DisconnectionNotificationPacket() {
         super(DisconnectionNotificationPacket.ID);
     }
+
+    @Override
+    public String toString() {
+        return "DisconnectionNotificationPacket{}";
+    }
 }

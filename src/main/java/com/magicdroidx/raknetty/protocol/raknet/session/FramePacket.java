@@ -122,4 +122,20 @@ public class FramePacket implements Packet {
         return length;
     }
 
+    @Override
+    public String toString() {
+        return "FramePacket{" +
+                "reliability=" + reliability +
+                ", fragmented=" + fragmented +
+                ", indexReliable=" + indexReliable +
+                ", indexSequenced=" + indexSequenced +
+                ", indexOrdered=" + indexOrdered +
+                ", orderChannel=" + orderChannel +
+                ", fragmentCount=" + fragmentCount +
+                ", fragmentID=" + fragmentID +
+                ", fragmentIndex=" + fragmentIndex +
+                ", fragment=" + fragment +
+                ", body=" + body +
+                '}';
+    }
 }

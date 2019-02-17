@@ -4,6 +4,9 @@ import com.magicdroidx.raknetty.handler.session.Session;
 import com.magicdroidx.raknetty.listener.ServerListener;
 import com.magicdroidx.raknetty.listener.SessionListenerAdapter;
 import com.magicdroidx.raknetty.protocol.game.GamePacket;
+import com.magicdroidx.raknetty.protocol.game.LoginPacket;
+import com.magicdroidx.raknetty.protocol.game.ServerToClientHandshake;
+import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 
 /**
  * RakNetty Project
@@ -18,7 +21,7 @@ public class RakNetty {
             (byte) 0x12, (byte) 0x34, (byte) 0x56, (byte) 0x78
     };
 
-    public static final int PROTOCOL_VERSION = 8;
+    public static final int PROTOCOL_VERSION = 9;
 
     public static void main(String[] args) throws Exception {
 
@@ -40,6 +43,18 @@ public class RakNetty {
                             @Override
                             public void packetReceived(Session session, GamePacket packet) {
                                 System.out.println("Received a game packet: \r\n" + packet);
+
+                                if (packet instanceof LoginPacket) {
+                                    ServerToClientHandshake handshake = new ServerToClientHandshake();
+                                    handshake.token = "LMFAOWTFMCPE";
+                                    session.sendPacket(handshake, Reliability.RELIABLE);
+                                    /*PlayStatusPacket response = new PlayStatusPacket();
+                                    response.status = PlayStatusPacket.LOGIN_FAILED_SERVER_FULL;
+                                    session.sendPacket(response);
+
+                                    DisconnectPacket disconnectPacket = new DisconnectPacket();
+                                    session.sendPacket(disconnectPacket);*/
+                                }
                             }
 
                             @Override
@@ -51,10 +66,10 @@ public class RakNetty {
 
                     @Override
                     public void onSessionRemoved(Session session, String reason) {
-                        System.out.println("Session closed: " + session.address() + " due to " + reason);
+                        System.out.println("Session ended: " + session.address() + " due to " + reason);
                     }
                 })
-                .withPort(11111)
+                .withPort(19132)
                 .start();
 
         //server.stop();

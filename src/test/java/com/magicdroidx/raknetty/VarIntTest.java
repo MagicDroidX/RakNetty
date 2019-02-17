@@ -32,6 +32,15 @@ public class VarIntTest {
     }
 
     @Test
+    public void testUnsignedVarInt2() throws IOException {
+
+        byte[] bytes = new byte[]{(byte) 0xd8, (byte) 0xe3, (byte) 0x02};
+        RakNetInputStream in = new RakNetInputStream(new ByteArrayInputStream(bytes));
+        int result = in.readUnsignedVarInt();
+        assertEquals(45538, result);
+    }
+
+    @Test
     public void testVarInt() throws IOException {
         int[] ints = new int[]{1, 129, 257, 513, 1025, 2049};
         for (int i : ints) {

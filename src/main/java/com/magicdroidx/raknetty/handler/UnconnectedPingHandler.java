@@ -10,7 +10,7 @@ import io.netty.channel.ChannelHandlerContext;
  * raknetty Project
  * Author: MagicDroidX
  */
-public class UnconnectedPingHandler extends RakNetPacketHandler<UnconnectedPingPacket> {
+public class UnconnectedPingHandler extends RakNetInboundHandler<UnconnectedPingPacket> {
 
     private RakNetServer server;
 
@@ -27,7 +27,7 @@ public class UnconnectedPingHandler extends RakNetPacketHandler<UnconnectedPingP
         pong.pingId = ping.pingId;
         pong.serverGUID = server.uuid().getMostSignificantBits();
         //TODO: Customize
-        pong.serverName = "MCPE;Hello! RakNetty!;113;1.1.4;0;20;8964;Realm;Creative";
+        pong.serverName = "MCPE;Hello! RakNetty!;291;1.7.0;0;20;8964;RakNetty;Creative";
 
         ctx.writeAndFlush(new AddressedRakNetPacket<>(pong, p.sender()));
     }

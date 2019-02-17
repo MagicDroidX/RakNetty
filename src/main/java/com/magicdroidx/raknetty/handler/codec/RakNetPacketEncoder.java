@@ -2,6 +2,7 @@ package com.magicdroidx.raknetty.handler.codec;
 
 import com.magicdroidx.raknetty.buffer.RakNetByteBuf;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
@@ -22,6 +23,9 @@ public class RakNetPacketEncoder extends MessageToMessageEncoder<AddressedEnvelo
         RakNetPacket packet = msg.content();
         RakNetByteBuf data = RakNetByteBuf.buffer();
         packet.write(data);
+
+        //System.out.println("OUT:\n" + ByteBufUtil.prettyHexDump(data));
+
         out.add(new DatagramPacket(data, msg.recipient(), msg.sender()));
     }
 

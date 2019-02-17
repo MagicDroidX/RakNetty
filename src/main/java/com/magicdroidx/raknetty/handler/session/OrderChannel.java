@@ -52,4 +52,12 @@ public class OrderChannel {
             }
         }
     }
+
+    @Override
+    public String toString() {
+        return "OrderChannel{" +
+                "start=" + start +
+                ", end=" + end +
+                '}';
+    }
 }

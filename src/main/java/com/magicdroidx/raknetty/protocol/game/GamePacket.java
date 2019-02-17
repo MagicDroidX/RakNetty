@@ -19,13 +19,17 @@ public class GamePacket implements Packet {
     public static GamePacket from(ByteBuf buf) {
         RakNetByteBuf in = RakNetByteBuf.wrappedBuffer(buf);
 
-        int id = in.readUnsignedByte();
+        int id = in.readUnsignedVarInt();
 
         GamePacket packet;
         switch (id) {
             case LoginPacket.ID:
                 packet = new LoginPacket();
                 break;
+            case PlayStatusPacket.ID:
+                packet = new PlayStatusPacket();
+                break;
+
             default:
                 return new GamePacket(id);
         }
@@ -45,6 +49,13 @@ public class GamePacket implements Packet {
 
     @Override
     public void write(RakNetByteBuf out) {
-        out.writeByte(id());
+        out.writeUnsignedVarInt(id());
+    }
+
+    @Override
+    public String toString() {
+        return "GamePacket{" +
+                "id=" + id +
+                '}';
     }
 }

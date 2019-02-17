@@ -1,6 +1,7 @@
 package com.magicdroidx.raknetty.handler.session;
 
 import com.magicdroidx.raknetty.listener.SessionListener;
+import com.magicdroidx.raknetty.protocol.game.GamePacket;
 import com.magicdroidx.raknetty.protocol.raknet.RakNetPacket;
 import com.magicdroidx.raknetty.protocol.raknet.Reliability;
 import com.magicdroidx.raknetty.protocol.raknet.session.SessionPacket;
@@ -30,6 +31,8 @@ public interface Session {
     void update();
 
     void handle(SessionPacket packet);
+
+    void sendPacket(GamePacket packet);
 
     void sendPacket(RakNetPacket packet, Reliability reliability);
 
