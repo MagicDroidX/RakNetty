@@ -28,6 +28,8 @@ import java.util.concurrent.TimeUnit;
  */
 public abstract class AbstractSession implements Session {
 
+    private static final int ORDER_CHANNEL_COUNTS = 32;
+
     //Session Info
     int MTU;
     InetSocketAddress address;
@@ -68,7 +70,7 @@ public abstract class AbstractSession implements Session {
         this.ctx = ctx;
         tickTask = sessionHandler.tickGroup().scheduleAtFixedRate(this::update0, 10, 10, TimeUnit.MILLISECONDS);
 
-        for (int i = 0; i < 32; i++) {
+        for (int i = 0; i < ORDER_CHANNEL_COUNTS; i++) {
             orderChannels.put(i, new OrderChannel(this));
         }
     }
@@ -299,8 +301,6 @@ public abstract class AbstractSession implements Session {
                     }
 
                     channel.provide(frame);
-                    System.out.println(channel);
-                    System.out.println(frame.indexOrdered);
                     continue;
                 }
 
@@ -383,24 +383,42 @@ public abstract class AbstractSession implements Session {
                 - FrameSetPacket.OVERHEAD_LENGTH
                 - FramePacket.OVERHEAD_LENGTH
                 - reliability.length();
+
         if (buf.writerIndex() > maxSize) {
+
+            //Cut packet into pieces; reduce the fragment overhead in advance.
             int chunkSize = maxSize - FramePacket.FRAGMENT_OVERHEAD_LENGTH;
+
             int fragmentID = outboundFragmentID++;
+            int fragmentIndex = 0;
+            int fragmentCount = (int) Math.ceil(1.0d * buf.readableBytes() / chunkSize);
+
+            // All fragments share to same ordered or sequenced index
+            int indexSequenced = outboundIndexSequenced;
+            int indexOrdered = outboundIndexOrdered;
+            if (reliability.isSequenced()) {
+                indexSequenced = outboundIndexSequenced++;
+            } else if (reliability.isOrdered()) {
+                indexOrdered = outboundIndexOrdered++;
+            }
+
             while (buf.isReadable()) {
                 ByteBuf fragment = buf.readBytes(Math.min(chunkSize, buf.readableBytes()));
                 FramePacket frame = new FramePacket();
-                frame.fragmentID = fragmentID;
                 frame.fragmented = true;
+                frame.fragmentID = fragmentID;
+                frame.fragmentIndex = fragmentIndex++;
+                frame.fragmentCount = fragmentCount;
                 frame.fragment = fragment;
                 frame.reliability = reliability;
                 frame.indexReliable = outboundIndexReliable++;
-                if (reliability.isSequenced()) {
-                    frame.indexSequenced = outboundIndexSequenced++;
-                } else if (reliability.isOrdered()) {
-                    frame.indexOrdered = outboundIndexOrdered++;
-                }
+                frame.indexSequenced = indexSequenced;
+                frame.indexOrdered = indexOrdered;
+
+                //Add them to the resend queue or send them immediately.
                 sendPacket(frame, immediate);
             }
+
         } else {
             FramePacket frame = new FramePacket();
             frame.body = buf;

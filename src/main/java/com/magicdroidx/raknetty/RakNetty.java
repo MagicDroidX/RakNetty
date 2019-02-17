@@ -3,10 +3,10 @@ package com.magicdroidx.raknetty;
 import com.magicdroidx.raknetty.handler.session.Session;
 import com.magicdroidx.raknetty.listener.ServerListener;
 import com.magicdroidx.raknetty.listener.SessionListenerAdapter;
+import com.magicdroidx.raknetty.protocol.game.DisconnectPacket;
 import com.magicdroidx.raknetty.protocol.game.GamePacket;
 import com.magicdroidx.raknetty.protocol.game.LoginPacket;
-import com.magicdroidx.raknetty.protocol.game.ServerToClientHandshake;
-import com.magicdroidx.raknetty.protocol.raknet.Reliability;
+import com.magicdroidx.raknetty.protocol.game.PlayStatusPacket;
 
 /**
  * RakNetty Project
@@ -45,15 +45,15 @@ public class RakNetty {
                                 System.out.println("Received a game packet: \r\n" + packet);
 
                                 if (packet instanceof LoginPacket) {
-                                    ServerToClientHandshake handshake = new ServerToClientHandshake();
+                                    /*ServerToClientHandshake handshake = new ServerToClientHandshake();
                                     handshake.token = "LMFAOWTFMCPE";
-                                    session.sendPacket(handshake, Reliability.RELIABLE);
-                                    /*PlayStatusPacket response = new PlayStatusPacket();
+                                    session.sendPacket(handshake, Reliability.RELIABLE);*/
+                                    PlayStatusPacket response = new PlayStatusPacket();
                                     response.status = PlayStatusPacket.LOGIN_FAILED_SERVER_FULL;
                                     session.sendPacket(response);
 
                                     DisconnectPacket disconnectPacket = new DisconnectPacket();
-                                    session.sendPacket(disconnectPacket);*/
+                                    session.sendPacket(disconnectPacket);
                                 }
                             }
 
