@@ -34,6 +34,8 @@ public interface Session {
 
     void sendPacket(GamePacket packet);
 
+    void sendPacketDirect(GamePacket packet);
+
     void sendPacket(RakNetPacket packet, Reliability reliability);
 
     void sendPacket(RakNetPacket packet, Reliability reliability, boolean immediate);

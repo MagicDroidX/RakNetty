@@ -14,6 +14,7 @@ public class OrderChannel {
     private static final int MAX_SIZE = 128;
     private int start = -1;
     private int end = -1;
+    private int outboundIndex = 0;
     private HashMap<Integer, FramePacket> packets = new HashMap<>();
 
     private Session session;
@@ -36,7 +37,6 @@ public class OrderChannel {
 
                 process();
             }
-
         }
     }
 
@@ -51,6 +51,16 @@ public class OrderChannel {
                 break;
             }
         }
+    }
+
+    void release() {
+        for (FramePacket packet : packets.values()) {
+            packet.release();
+        }
+    }
+
+    public int nextIndex() {
+        return this.outboundIndex++;
     }
 
     @Override

@@ -122,6 +122,16 @@ public class FramePacket implements Packet {
         return length;
     }
 
+    public void release() {
+        if (fragment != null) {
+            fragment.release();
+        }
+
+        if (body != null) {
+            body.release();
+        }
+    }
+
     @Override
     public String toString() {
         return "FramePacket{" +

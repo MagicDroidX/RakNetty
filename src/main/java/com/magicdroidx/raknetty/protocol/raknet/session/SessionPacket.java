@@ -54,6 +54,7 @@ public class SessionPacket extends RakNetPacket {
         }
 
         packet.read(in);
+        in.release();
         return packet;
     }
 }

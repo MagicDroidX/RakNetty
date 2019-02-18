@@ -94,7 +94,7 @@ public class ServerSession extends AbstractSession {
             ConnectionRequestAcceptedPacket response = new ConnectionRequestAcceptedPacket();
             response.clientAddress = address;
             response.incomingTimestamp = request.timestamp;
-            response.serverTimestamp = System.currentTimeMillis();
+            response.serverTimestamp = System.currentTimeMillis() * 1000;
             response.addresses = server().systemAddresses();
             sendPacket(response, Reliability.UNRELIABLE);
 

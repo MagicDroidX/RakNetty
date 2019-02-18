@@ -7,7 +7,7 @@ import com.magicdroidx.raknetty.protocol.raknet.session.SessionPacket;
  * raknetty Project
  * Author: MagicDroidX
  */
-public class ServerToClientHandshake extends SessionPacket {
+public class ServerToClientHandshake extends GamePacket {
     public static final int ID = 0x03;
 
     public CharSequence token;

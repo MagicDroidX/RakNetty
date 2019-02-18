@@ -105,7 +105,7 @@ public abstract class AbstractSession implements Session {
             while ((p = sendQueue.poll()) != null) {
                 wrapperPacket.packets.add(p);
             }
-            sendPacket(wrapperPacket, Reliability.RELIABLE_ORDERED_ACK);
+            sendPacket(wrapperPacket, Reliability.RELIABLE_ORDERED);
         }
 
         //Dealing with Resend Queue
@@ -212,6 +212,9 @@ public abstract class AbstractSession implements Session {
         sendPacket(new DisconnectionNotificationPacket(), Reliability.UNRELIABLE, true);
         sessionHandler.close0(this, reason);
         tickTask.cancel(true);
+        for (OrderChannel channel : orderChannels.values()) {
+            channel.release();
+        }
 
         if (this.listener != null) {
             this.listener.disconnected(this);
@@ -231,10 +234,12 @@ public abstract class AbstractSession implements Session {
 
                     if (acknowledgePacket.records().contains(index)) {
                         if (acknowledgePacket.isACK()) {
+                            System.out.println("ACKED: " + future.packet());
                             iterator.remove();
                         }
 
                         if (acknowledgePacket.isNACK()) {
+                            System.out.println("NACK: " + future.packet());
                             future.setSendTime(System.currentTimeMillis());
                         }
                     }
@@ -389,7 +394,7 @@ public abstract class AbstractSession implements Session {
             //Cut packet into pieces; reduce the fragment overhead in advance.
             int chunkSize = maxSize - FramePacket.FRAGMENT_OVERHEAD_LENGTH;
 
-            int fragmentID = outboundFragmentID++;
+            int fragmentID = outboundFragmentID = outboundFragmentID++ % 65536;
             int fragmentIndex = 0;
             int fragmentCount = (int) Math.ceil(1.0d * buf.readableBytes() / chunkSize);
 
@@ -436,6 +441,17 @@ public abstract class AbstractSession implements Session {
     @Override
     public void sendPacket(GamePacket packet) {
         sendQueue.add(packet);
+    }
+
+    public void sendPacketDirect(GamePacket packet) {
+        FramePacket frame = new FramePacket();
+        RakNetByteBuf buf = RakNetByteBuf.buffer();
+        packet.write(buf);
+        frame.body = buf;
+        frame.reliability = Reliability.RELIABLE_ORDERED;
+        frame.indexReliable = outboundIndexReliable++;
+        frame.indexOrdered = outboundIndexOrdered++;
+        sendPacket(frame);
     }
 
     @Override

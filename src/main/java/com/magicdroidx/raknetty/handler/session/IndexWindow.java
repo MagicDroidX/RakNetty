@@ -14,6 +14,10 @@ public class IndexWindow {
     private int end = -1;
     private Set<Integer> opened = new HashSet<>();
 
+    public void flush() {
+        start = end;
+    }
+
     public boolean openWindow(int index) {
         if (index > start && index - start < MAX_SIZE) {
             if (opened.contains(index)) {
@@ -51,5 +55,13 @@ public class IndexWindow {
         }
 
         return closed;
+    }
+
+    public int start() {
+        return start;
+    }
+
+    public int end() {
+        return end;
     }
 }
